@@ -1,0 +1,187 @@
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
+
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+
+#include <iostream>
+
+#include "System.hpp"
+#include "Pendulum_system.hpp"
+#include "Merson.hpp"
+
+constexpr double PI = 3.14159265358979323846;
+
+GLuint create_texture(PendulumSystem* system) {
+    GLuint tex;
+    glGenTextures(1, &tex);
+    glBindTexture(GL_TEXTURE_2D, tex);
+
+    int dof = system->get_degrees_of_freedom();
+    unsigned char* data = new unsigned char[dof * 3];
+    for(int i = 0; i < system->get_degrees_of_freedom() * 3; i += 3){
+        data[i] = 255;      // R
+        data[i + 1] = 0;    // G
+        data[i + 2] = 0;    // B
+    }
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, system->get_size()[0], system->get_size()[1], 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    delete[] data;
+    return tex;
+}
+
+void update_texture(GLuint texture, PendulumSystem* system) {
+    glBindTexture(GL_TEXTURE_2D, texture);
+
+    int dof = system->get_degrees_of_freedom();
+    unsigned char* data = new unsigned char[dof * 3];
+
+    // Naplníme data, např. červená pro každý bod
+    for(int i = 0; i < dof * 3; i += 3){
+        data[i] = 255;      // R
+        data[i + 1] = 255;    // G
+        data[i + 2] = 0;    // B
+    }
+
+    // Přepíšeme pixely existující textury
+    glTexSubImage2D(
+        GL_TEXTURE_2D, 
+        0,                  // mipmap level
+        0, 0,               // xoffset, yoffset
+        system->get_size()[0], 
+        system->get_size()[1], 
+        GL_RGB, 
+        GL_UNSIGNED_BYTE, 
+        data
+    );
+
+    delete[] data;
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+
+
+int main() {
+    if (!glfwInit()) return -1;
+
+    GLFWwindow* window = glfwCreateWindow(800, 600, "Menu + Image", NULL, NULL);
+    if (!window) {
+        glfwTerminate();
+        return -1;
+    }
+    glfwMakeContextCurrent(window);
+    gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
+
+    // ImGui setup
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    ImGui::StyleColorsDark();
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 130");
+
+    std::array<float, 4> bounds = {-PI, PI, -PI, PI};
+    int size_x = 256;
+    int size_y = 256;
+    float show_time = 0;
+    float max_time = 1;
+    PendulumSystem system(size_x, size_y, bounds, 1.0, 1.0, 1.0, 1.0);
+    // Texture
+    GLuint texture = create_texture(&system);
+
+    while (!glfwWindowShouldClose(window)) {
+        glfwPollEvents();
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        // Menu nahoře
+        if (ImGui::BeginMainMenuBar()) {
+            if (ImGui::BeginMenu("File")) {
+                if (ImGui::MenuItem("Save Image")) {
+                    std::cout << "TODO: Save image\n";
+                }
+                if (ImGui::MenuItem("Reset Image")) {
+                    glDeleteTextures(1, &texture);
+                    system = PendulumSystem(size_x, size_y, bounds, 1.0, 1.0, 1.0, 1.0);
+                    texture = create_texture(&system);
+                }
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu("Parameters")) {
+                ImGui::InputFloat("Left bound",  &bounds[0]);
+                ImGui::InputFloat("Right bound", &bounds[1]);
+                ImGui::InputFloat("Lower bound", &bounds[2]);
+                ImGui::InputFloat("Upper bound", &bounds[3]);
+                ImGui::InputInt("Size in x direction", &size_x);
+                ImGui::InputInt("Size in y direction", &size_y);
+                ImGui::InputFloat("Maximum time", &max_time);
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu("View")) {
+                if (ImGui::SliderFloat("Time", &show_time, 0, max_time)) {
+                    update_texture(texture, &system);
+                }
+                if (ImGui::MenuItem("Animation")) {
+                    std::cout << show_time << std::endl;
+                    //TODO: Dodělat.
+                }
+                ImGui::EndMenu();
+            }
+            ImGui::EndMainMenuBar();
+        }
+
+        // Obrázek bez lišty + udržení poměru stran
+        ImGui::SetNextWindowPos(ImVec2(0, ImGui::GetFrameHeight())); // pod menu
+        ImVec2 viewportSize = ImGui::GetMainViewport()->Size;
+        ImGui::SetNextWindowSize(ImVec2(viewportSize.x, viewportSize.y - ImGui::GetFrameHeight()));
+        ImGui::Begin("Obrazek", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
+
+        ImVec2 avail = ImGui::GetContentRegionAvail();
+        float windowAspect = avail.x / avail.y;
+        float imageAspect  = (float)system.get_size()[0] / (float)system.get_size()[1];
+
+        ImVec2 imageSize;
+        if (windowAspect > imageAspect) {
+            // okno je širší než obrázek -> přizpůsobíme výšku
+            imageSize.y = avail.y;
+            imageSize.x = imageAspect * avail.y;
+        } else {
+            // okno je vyšší než obrázek -> přizpůsobíme šířku
+            imageSize.x = avail.x;
+            imageSize.y = avail.x / imageAspect;
+        }
+
+        // vycentrování
+        ImVec2 cursorPos = ImGui::GetCursorPos();
+        ImGui::SetCursorPosX(cursorPos.x + (avail.x - imageSize.x) * 0.5f);
+        ImGui::SetCursorPosY(cursorPos.y + (avail.y - imageSize.y) * 0.5f);
+
+        ImGui::Image((void*)(intptr_t)texture, imageSize);
+        ImGui::End();
+
+        ImGui::Render();
+        int display_w, display_h;
+        glfwGetFramebufferSize(window, &display_w, &display_h);
+        glViewport(0, 0, display_w, display_h);
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+        glfwSwapBuffers(window);
+    }
+
+    glDeleteTextures(1, &texture);
+
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+    glfwDestroyWindow(window);
+    glfwTerminate();
+    return 0;
+}
