@@ -4,8 +4,11 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
 
 #include <iostream>
+#include <string>
 
 #include "System.hpp"
 #include "Pendulum_system.hpp"
@@ -49,7 +52,7 @@ void update_texture(GLuint texture, PendulumSystem* system, double show_time) {
     int index = 0;
     for (int i = 0; i < system->get_size()[0]; i++) {
         for (int j = 0; j < system->get_size()[1]; j++) {
-            index = 3*(j*system->get_size()[0] + i);
+            index = 3*((system->get_size()[1] - 1 - j)*system->get_size()[0] + i);
 
             data[index] = 0;        // R
             data[index + 1] = 0;    // G
@@ -58,17 +61,17 @@ void update_texture(GLuint texture, PendulumSystem* system, double show_time) {
             if (normalize_angle(system->get_phi_1(i, j, show_time)) <= PI &&
                 normalize_angle(system->get_phi_2(i, j, show_time)) <= PI) {
                 data[index] = 255;
+                data[index + 1] = 255;
             }
             else if (normalize_angle(system->get_phi_1(i, j, show_time)) <= PI &&
                      normalize_angle(system->get_phi_2(i, j, show_time)) > PI) {
-                data[index + 1] = 255;
+                data[index] = 255;
             }
             else if (normalize_angle(system->get_phi_1(i, j, show_time)) > PI &&
                      normalize_angle(system->get_phi_2(i, j, show_time)) <= PI){
                 data[index + 2] = 255;
             }
             else{
-                data[index] = 255;
                 data[index + 1] = 255;
             }
         }
@@ -90,10 +93,28 @@ void update_texture(GLuint texture, PendulumSystem* system, double show_time) {
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-void calculate(PendulumSystem* system, double max_time) {
+void calculate(PendulumSystem* system, double max_time, double integration_step) {
     Merson solver;
-    solver.set_up(system, 0.1, 0.01);
+    int step_count = 100;
+    double time_step = max_time / step_count;
+    solver.set_up(system, time_step, integration_step);
     solver.solve(max_time);
+}
+
+void save_image(GLuint texture, PendulumSystem* system, double show_time) {
+    std::vector<unsigned char> pixels(system->get_size()[0] * system->get_size()[1] * 3);
+
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    std::string filename = "Images/output" + std::to_string(show_time) + ".png";
+    stbi_write_png(filename.c_str(),
+                   system->get_size()[0],
+                   system->get_size()[1],
+                   3,
+                   pixels.data(),
+                   system->get_size()[0] * 3);
 }
 
 int main() {
@@ -120,6 +141,7 @@ int main() {
     int size_y = 256;
     float show_time = 0;
     float max_time = 1;
+    double integration_step = 0.01;
     PendulumSystem system(size_x, size_y, bounds, 1.0, 1.0, 1.0, 1.0);
     // Texture
     GLuint texture = create_texture(&system);
@@ -134,12 +156,12 @@ int main() {
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu("File")) {
                 if (ImGui::MenuItem("Save Image")) {
-                    std::cout << "TODO: Save image\n";
+                    save_image(texture, &system, show_time);
                 }
                 if (ImGui::MenuItem("Reset Image")) {
                     glDeleteTextures(1, &texture);
                     system = PendulumSystem(size_x, size_y, bounds, 1.0, 1.0, 1.0, 1.0);
-                    calculate(&system, max_time);
+                    calculate(&system, max_time, integration_step);
                     texture = create_texture(&system);
                     update_texture(texture, &system, show_time);
                 }
@@ -153,6 +175,7 @@ int main() {
                 ImGui::InputInt("Size in x direction", &size_x);
                 ImGui::InputInt("Size in y direction", &size_y);
                 ImGui::InputFloat("Maximum time", &max_time);
+                ImGui::InputDouble("Integration step", &integration_step);
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("View")) {
@@ -160,8 +183,7 @@ int main() {
                     update_texture(texture, &system, show_time);
                 }
                 if (ImGui::MenuItem("Animation")) {
-                    std::cout << show_time << std::endl;
-                    //TODO: Dodělat.
+                    
                 }
                 ImGui::EndMenu();
             }

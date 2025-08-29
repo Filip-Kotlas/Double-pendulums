@@ -19,7 +19,7 @@ void Merson::solve(double time_max)
     int steps_count = std::ceil((time_max - this->current_system->get_time())/time_step);
     this->current_system->record_state();
     auto clock_computation_start = std::chrono::high_resolution_clock::now();
-
+    
     for(int k = 0; k <= steps_count; k++){
         auto clock_step_start = std::chrono::high_resolution_clock::now();
         this->integrate_step(time_max);
@@ -32,10 +32,10 @@ void Merson::solve(double time_max)
         int minutes_remaining = (static_cast<int>(remaining_time) % 3600) / 60;
         int seconds_remaining = remaining_time - (hours_remaining * 3600 + minutes_remaining * 60);
 
-        double elapsed_time = (std::chrono::duration<double>(clock_step_end - clock_step_start).count());
+        double elapsed_time = (std::chrono::duration<double>(clock_step_end - clock_computation_start).count());
         int hours_elapsed = static_cast<int>(elapsed_time) / 3600;
         int minutes_elapsed = (static_cast<int>(elapsed_time) % 3600) / 60;
-        int seconds_elapsed = elapsed_time - (hours_remaining * 3600 + minutes_remaining * 60);
+        int seconds_elapsed = elapsed_time - (hours_elapsed * 3600 + minutes_elapsed * 60);
 
         std::cout << "Steps completed: " << k << " / " << steps_count << " => " << std::fixed
                   << std::setprecision(2) << (double) k / (double) steps_count * 100.0 << "% ";

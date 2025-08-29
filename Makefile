@@ -3,7 +3,7 @@ CXXFLAGS = -Ilibs/imgui -Ilibs/glad/include -Ilibs/glfw/include -Iinclude -std=c
 LDFLAGS = -Llibs/glfw/lib -lglfw3 -lopengl32 -lgdi32 -luser32 -lshell32
 
 BIN_DIR = build
-APP = Double-pundulums.exe
+APP ?= Double-pundulums.exe
 
 IMGUI_SRC = $(wildcard libs/imgui/*.cpp)
 GLAD_SRC  = $(wildcard libs/glad/src/*.c)
