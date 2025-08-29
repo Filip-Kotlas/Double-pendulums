@@ -7,6 +7,7 @@
 #include <cmath>
 #include <iomanip>
 #include <vector>
+#include <chrono>
 
 class Merson
 {
@@ -23,10 +24,7 @@ class Merson
 
     
     public:
-
-    void set_up(System *system, double time_step, double integration_step);
-    void solve(double time_max);
-    void integrate_step(double time_max);
-
-
+        void set_up(System *system, double time_step, double integration_step);
+        void solve(double time_max);
+        void integrate_step(double time_max);
 };

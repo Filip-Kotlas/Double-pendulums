@@ -1,6 +1,6 @@
 #include "Pendulum_system.hpp"
 
-void PendulumSystem::get_right_hand_side(const double time, const std::vector<double>& u, std::vector<double>& right_hand_side)
+void PendulumSystem::get_right_hand_side(const double time, const std::vector<double>& state, std::vector<double>& right_hand_side)
 {
     float g = 9.81;
     double a, b, c, d, e, f;
@@ -29,8 +29,8 @@ void PendulumSystem::set_initial_conditions(const double time)
         for(int j = 0; j < this->size_y; j++){
             set_der_phi_1(i, j, 0);
             set_der_phi_2(i, j, 0);
-            set_phi_1(i, j, bounds[0] + i*(bounds[1] - bounds[0])/size_x);
-            set_phi_2(i, j, bounds[2] + j*(bounds[3] - bounds[2])/size_y);
+            set_phi_1(i, j, bounds[0] + (i + 1)*(bounds[1] - bounds[0])/(size_x + 1));
+            set_phi_2(i, j, bounds[2] + (j + 1)*(bounds[3] - bounds[2])/(size_y + 1));
         }
     }
 }
@@ -68,5 +68,5 @@ void PendulumSystem::write_state_to_file(int number)
 
 void PendulumSystem::record_state()
 {
-    this->state_history.push_back(u);
+    this->state_history[this->time] = state;
 }

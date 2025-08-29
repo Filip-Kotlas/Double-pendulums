@@ -22,41 +22,39 @@ class PendulumSystem : public System
         double mass_2;
         double length_1;
         double length_2;
-        std::array<float, 4> bounds;
+        std::array<double, 4> bounds;
 
         double get_phi_1(int i, int j){
-            return u[(j*size_x + i)*4];
+            return state[(j*size_x + i)*4];
         };
         double get_phi_2(int i, int j){
-            return u[(j*size_x + i)*4 + 1];
+            return state[(j*size_x + i)*4 + 1];
         };
         double get_der_phi_1(int i, int j){
-            return u[(j*size_x + i)*4 + 2];
+            return state[(j*size_x + i)*4 + 2];
         }
         double get_der_phi_2(int i, int j){
-            return u[(j*size_x + i)*4 + 3];
+            return state[(j*size_x + i)*4 + 3];
         }
 
         void set_phi_1(int i, int j, double value){
-            u[(j*size_x + i)*4] = value;
+            state[(j*size_x + i)*4] = value;
         }
         void set_phi_2(int i, int j, double value){
-            u[(j*size_x + i)*4 + 1] = value;
+            state[(j*size_x + i)*4 + 1] = value;
         }
         void set_der_phi_1(int i, int j, double value){
-            u[(j*size_x + i)*4 + 2] = value;
+            state[(j*size_x + i)*4 + 2] = value;
         }
         void set_der_phi_2(int i, int j, double value){
-            u[(j*size_x + i)*4 + 3] = value;
+            state[(j*size_x + i)*4 + 3] = value;
         }
-
-
 
     public:
         // constructor
         PendulumSystem(int size_x,
                     int size_y,
-                    std::array<float, 4>& bounds,
+                    std::array<double, 4>& bounds,
                     double mass_1,
                     double mass_2,
                     double length_1,
@@ -71,15 +69,30 @@ class PendulumSystem : public System
         {
             this->degrees_of_freedom = size_x * size_y * 4;
             time = 0;
-            u.resize(this->degrees_of_freedom);
+            state.resize(this->degrees_of_freedom, 0);
+            this->set_initial_conditions(time);
         }
 
         std::array<int, 2> get_size(){
             return {this->size_x, this->size_y};
         }
 
-        void get_right_hand_side(const double time, const std::vector<double>& u, std::vector<double>& right_hand_side);
+        void get_right_hand_side(const double time, const std::vector<double>& state, std::vector<double>& right_hand_side);
         void set_initial_conditions(const double time);
         void write_state_to_file(int number);
         void record_state();
+
+        double get_phi_1(int i, int j, double time){
+            return get_state_history(time)[(j*size_x + i)*4];
+        };
+        double get_phi_2(int i, int j, double time){
+            return get_state_history(time)[(j*size_x + i)*4 + 1];
+        };
+        double get_der_phi_1(int i, int j, double time){
+            return get_state_history(time)[(j*size_x + i)*4 + 2];
+        }
+        double get_der_phi_2(int i, int j, double time){
+            return get_state_history(time)[(j*size_x + i)*4 + 3];
+        }
+
 };

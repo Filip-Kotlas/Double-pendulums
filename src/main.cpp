@@ -11,7 +11,7 @@
 #include "Pendulum_system.hpp"
 #include "Merson.hpp"
 
-constexpr double PI = 3.14159265358979323846;
+constexpr double PI = 3.141592653589793;
 
 GLuint create_texture(PendulumSystem* system) {
     GLuint tex;
@@ -22,8 +22,8 @@ GLuint create_texture(PendulumSystem* system) {
     unsigned char* data = new unsigned char[dof * 3];
     for(int i = 0; i < system->get_degrees_of_freedom() * 3; i += 3){
         data[i] = 255;      // R
-        data[i + 1] = 0;    // G
-        data[i + 2] = 0;    // B
+        data[i + 1] = 255;    // G
+        data[i + 2] = 255;    // B
     }
 
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, system->get_size()[0], system->get_size()[1], 0, GL_RGB, GL_UNSIGNED_BYTE, data);
@@ -34,17 +34,44 @@ GLuint create_texture(PendulumSystem* system) {
     return tex;
 }
 
-void update_texture(GLuint texture, PendulumSystem* system) {
+double normalize_angle(double angle)
+{
+    double normal_angle = angle - floor(angle/(2*PI))*2*PI;
+    return angle - floor(angle/(2*PI))*2*PI;
+}
+
+void update_texture(GLuint texture, PendulumSystem* system, double show_time) {
     glBindTexture(GL_TEXTURE_2D, texture);
 
     int dof = system->get_degrees_of_freedom();
     unsigned char* data = new unsigned char[dof * 3];
 
-    // Naplníme data, např. červená pro každý bod
-    for(int i = 0; i < dof * 3; i += 3){
-        data[i] = 255;      // R
-        data[i + 1] = 255;    // G
-        data[i + 2] = 0;    // B
+    int index = 0;
+    for (int i = 0; i < system->get_size()[0]; i++) {
+        for (int j = 0; j < system->get_size()[1]; j++) {
+            index = 3*(j*system->get_size()[0] + i);
+
+            data[index] = 0;        // R
+            data[index + 1] = 0;    // G
+            data[index + 2] = 0;    // B
+            
+            if (normalize_angle(system->get_phi_1(i, j, show_time)) <= PI &&
+                normalize_angle(system->get_phi_2(i, j, show_time)) <= PI) {
+                data[index] = 255;
+            }
+            else if (normalize_angle(system->get_phi_1(i, j, show_time)) <= PI &&
+                     normalize_angle(system->get_phi_2(i, j, show_time)) > PI) {
+                data[index + 1] = 255;
+            }
+            else if (normalize_angle(system->get_phi_1(i, j, show_time)) > PI &&
+                     normalize_angle(system->get_phi_2(i, j, show_time)) <= PI){
+                data[index + 2] = 255;
+            }
+            else{
+                data[index] = 255;
+                data[index + 1] = 255;
+            }
+        }
     }
 
     // Přepíšeme pixely existující textury
@@ -63,7 +90,11 @@ void update_texture(GLuint texture, PendulumSystem* system) {
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-
+void calculate(PendulumSystem* system, double max_time) {
+    Merson solver;
+    solver.set_up(system, 0.1, 0.01);
+    solver.solve(max_time);
+}
 
 int main() {
     if (!glfwInit()) return -1;
@@ -84,7 +115,7 @@ int main() {
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 130");
 
-    std::array<float, 4> bounds = {-PI, PI, -PI, PI};
+    std::array<double, 4> bounds = {-PI, PI, -PI, PI};
     int size_x = 256;
     int size_y = 256;
     float show_time = 0;
@@ -108,15 +139,17 @@ int main() {
                 if (ImGui::MenuItem("Reset Image")) {
                     glDeleteTextures(1, &texture);
                     system = PendulumSystem(size_x, size_y, bounds, 1.0, 1.0, 1.0, 1.0);
+                    calculate(&system, max_time);
                     texture = create_texture(&system);
+                    update_texture(texture, &system, show_time);
                 }
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Parameters")) {
-                ImGui::InputFloat("Left bound",  &bounds[0]);
-                ImGui::InputFloat("Right bound", &bounds[1]);
-                ImGui::InputFloat("Lower bound", &bounds[2]);
-                ImGui::InputFloat("Upper bound", &bounds[3]);
+                ImGui::InputDouble("Left bound",  &bounds[0]);
+                ImGui::InputDouble("Right bound", &bounds[1]);
+                ImGui::InputDouble("Lower bound", &bounds[2]);
+                ImGui::InputDouble("Upper bound", &bounds[3]);
                 ImGui::InputInt("Size in x direction", &size_x);
                 ImGui::InputInt("Size in y direction", &size_y);
                 ImGui::InputFloat("Maximum time", &max_time);
@@ -124,7 +157,7 @@ int main() {
             }
             if (ImGui::BeginMenu("View")) {
                 if (ImGui::SliderFloat("Time", &show_time, 0, max_time)) {
-                    update_texture(texture, &system);
+                    update_texture(texture, &system, show_time);
                 }
                 if (ImGui::MenuItem("Animation")) {
                     std::cout << show_time << std::endl;
