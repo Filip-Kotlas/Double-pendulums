@@ -48,7 +48,8 @@ void RungeKutta::solve(double time_max)
 void RungeKutta::integrate_step(double time_max)
 {
     double start_time = current_system->get_time();
-    while(current_system->get_time() <= std::min(time_max, start_time + this->time_step)){
+    while (this->integration_step <= start_time + this->time_step - current_system->get_time()) {
+        double tau = std::min(this->integration_step, start_time + this->time_step - current_system->get_time());
 
         // Computing k1
         current_system->get_right_hand_side(current_system->get_time(),
@@ -57,32 +58,31 @@ void RungeKutta::integrate_step(double time_max)
         
         // Computing k2
         for(int i = 0; i < current_system->get_degrees_of_freedom(); i++){
-            aux[i] = current_system->get_state()[i] + 1.0/2 * this->integration_step * k1[i];
+            aux[i] = current_system->get_state()[i] + 1.0/2 * tau * k1[i];
         }
-        current_system->get_right_hand_side(current_system->get_time() + 1.0/2*integration_step,
+        current_system->get_right_hand_side(current_system->get_time() + 1.0/2*tau,
                                             aux,
                                             k2);
         
         // Computing k3
         for(int i = 0; i < current_system->get_degrees_of_freedom(); i++){
-            aux[i] = current_system->get_state()[i] + 1.0/2 * this->integration_step * k2[i];
+            aux[i] = current_system->get_state()[i] + 1.0/2 * tau * k2[i];
         }
-        current_system->get_right_hand_side(current_system->get_time() + 1.0/2*integration_step,
+        current_system->get_right_hand_side(current_system->get_time() + 1.0/2*tau,
                                             aux,
                                             k3);
 
         // Computing k4
         for(int i = 0; i < current_system->get_degrees_of_freedom(); i++){
-            aux[i] = current_system->get_state()[i] + this->integration_step * k3[i];
+            aux[i] = current_system->get_state()[i] + tau * k3[i];
         }
-        current_system->get_right_hand_side(current_system->get_time() + integration_step,
+        current_system->get_right_hand_side(current_system->get_time() + tau,
                                             aux,
                                             k4);
 
         for(int i = 0; i < current_system->get_degrees_of_freedom(); i++){
-            current_system->get_state()[i] += 1.0/6 * integration_step * (k1[i] + 2*k2[i] + 2*k3[i] + k4[i]);
+            current_system->get_state()[i] += 1.0/6 * tau * (k1[i] + 2*k2[i] + 2*k3[i] + k4[i]);
         }
-        current_system->increase_time(integration_step);
-
+        current_system->increase_time(tau);
     }
 }
