@@ -35,38 +35,54 @@ void PendulumSystem::set_initial_conditions(const double time)
     }
 }
 
-void PendulumSystem::write_state_to_file(int number)
+void PendulumSystem::write_state_to_file(int number, std::filesystem::path folder_name)
 {
-   std::stringstream str;
-   str << "\\Result\\Pendulums" << std::setw( 5 ) << std::setfill( '0' ) << number << ".txt";
-   
-   std::fstream file;
-   file.open( str.str(), std::fstream::out | std::fstream::trunc );
-   if(!file)
-   {
-      throw std::ios_base::failure("Unable to open the file: " + str.str());
-   }
+    std::stringstream file_name;
+    file_name <<  "State_" << std::setw( 5 ) << std::setfill( '0' ) << number << ".txt";
+    std::filesystem::path full_path = folder_name / file_name.str();
+    
+    std::fstream file;
+    file.open( full_path.string(), std::fstream::out | std::fstream::trunc );
+    if(!file)
+    {
+        throw std::ios_base::failure("Unable to open the file: " + file_name.str());
+    }
 
-   file << std::scientific << std::setprecision(15);
+    file << std::scientific << std::setprecision(15);
 
-   file << this->time << std::endl << std::endl;
-   for(int j = 0; j < size_y; j++)
-   {
-      for( int i = 0; i < size_x; i++ )
-      {
-         file << i << " "
-              << j << " "
-              << get_phi_1(i, j) << " "
-              << get_phi_2(i, j) << " "
-              << get_der_phi_1(i, j) << " "
-              << get_der_phi_2(i, j);
-         file << std::endl;
-      }
-      file << std::endl;
-   }
+    file << this->time << std::endl << std::endl;
+    for(int j = 0; j < size_y; j++)
+    {
+        for( int i = 0; i < size_x; i++ )
+        {
+            file << i << " "
+                << j << " "
+                << get_phi_1(i, j) << " "
+                << get_phi_2(i, j) << " "
+                << get_der_phi_1(i, j) << " "
+                << get_der_phi_2(i, j);
+            file << std::endl;
+        }
+        file << std::endl;
+    }
 }
 
 void PendulumSystem::record_state()
 {
     this->state_history[this->time] = state;
+}
+
+void PendulumSystem::save_history_to_folder(std::string folder_name)
+{
+    std::filesystem::path folder_path = "results" / std::filesystem::path(folder_name);
+
+    if (std::filesystem::exists(folder_path)) 
+        std::filesystem::remove_all(folder_path);
+
+    std::filesystem::create_directories(folder_path);
+   
+    for (int i = 0; i < this->state_history.size(); i++)
+    {
+        write_state_to_file(i, folder_path);
+    }
 }
