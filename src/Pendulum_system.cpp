@@ -35,17 +35,19 @@ void PendulumSystem::set_initial_conditions(const double time)
     }
 }
 
-void PendulumSystem::write_state_to_file(int number, std::filesystem::path folder_name)
+void PendulumSystem::write_state_to_file(int number, std::string folder_name)
 {
-    std::stringstream file_name;
-    file_name <<  "State_" << std::setw( 5 ) << std::setfill( '0' ) << number << ".txt";
-    std::filesystem::path full_path = folder_name / file_name.str();
+    if (number >= this->state_history.size())
+        throw std::invalid_argument("Argument number is larger than size of state_history vector.");
+
+    std::stringstream file_path;
+    file_path <<  "\\results\\" << folder_name << "\\State_" << std::setw( 5 ) << std::setfill( '0' ) << number << ".txt";
     
     std::fstream file;
-    file.open( full_path.string(), std::fstream::out | std::fstream::trunc );
+    file.open( file_path.str(), std::fstream::out | std::fstream::trunc );
     if(!file)
     {
-        throw std::ios_base::failure("Unable to open the file: " + file_name.str());
+        throw std::ios_base::failure("Unable to open the file: " + file_path.str());
     }
 
     file << std::scientific << std::setprecision(15);
@@ -55,16 +57,20 @@ void PendulumSystem::write_state_to_file(int number, std::filesystem::path folde
     {
         for( int i = 0; i < size_x; i++ )
         {
+            std::cout << i << " " << j << std::endl;
             file << i << " "
-                << j << " "
-                << get_phi_1(i, j) << " "
-                << get_phi_2(i, j) << " "
-                << get_der_phi_1(i, j) << " "
-                << get_der_phi_2(i, j);
+                << j << " ";
+            std::cout << "Zde ted pred" << std::endl;
+            file << get_phi_1(i, j, number) << " ";
+            std::cout << "Zde ted " << std::endl;
+            file << get_phi_2(i, j, number) << " "
+                << get_der_phi_1(i, j, number) << " "
+                << get_der_phi_2(i, j, number);
             file << std::endl;
         }
         file << std::endl;
     }
+    std::cout << "Zde 3" << std::endl;
 }
 
 void PendulumSystem::record_state()
@@ -74,15 +80,9 @@ void PendulumSystem::record_state()
 
 void PendulumSystem::save_history_to_folder(std::string folder_name)
 {
-    std::filesystem::path folder_path = "results" / std::filesystem::path(folder_name);
-
-    if (std::filesystem::exists(folder_path)) 
-        std::filesystem::remove_all(folder_path);
-
-    std::filesystem::create_directories(folder_path);
-   
     for (int i = 0; i < this->state_history.size(); i++)
     {
-        write_state_to_file(i, folder_path);
+        write_state_to_file(i, folder_name);
+        std::cout << "Problem not here " << i << std::endl;
     }
 }

@@ -1,24 +1,19 @@
-#include "System.hpp"
-#include <stdexcept>
-#include <cmath>
-#include <map>
+#include <System.hpp>
 
-const std::vector<double>& System::get_state_history(double time) {
+const std::vector<double> System::get_state_history(int number) {
     if (state_history.empty()) {
         throw std::runtime_error("State history is empty");
     }
-
-    auto lower_bound = this->state_history.lower_bound(time);
-
-    if (lower_bound == state_history.begin())
-        return lower_bound->second;
-    else if (lower_bound == state_history.end())
-        return std::prev(lower_bound)->second;
-    else {
-        auto previous = std::prev(lower_bound);
-        if (std::abs(previous->first - time) < std::abs(lower_bound->first - time))
-            return previous->second;
-        else
-            return lower_bound->second;
+    if (number >= state_history.size()) {
+        throw std::invalid_argument("The argument number is larger than the size of state history.");
     }
+
+    return state_history[number];
+}
+
+const std::vector<double> System::get_state_history(double time) {
+    if (time_step == 0) {
+        throw std::logic_error("Time step was not set.");
+    }
+    return get_state_history(std::round(time/time_step));
 }

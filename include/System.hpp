@@ -3,17 +3,19 @@
 #include <map>
 #include <cmath>
 #include <string>
-#include <filesystem>
+#include <stdexcept>
 
 class System
 {
     protected:
         int degrees_of_freedom;
         double time;
+        double time_step;
         std::vector<double> state;
-        std::map<double, std::vector<double>> state_history;
+        std::vector<std::vector<double>> state_history;
 
-        const std::vector<double>& get_state_history(double time);
+        const std::vector<double> get_state_history(double time);
+        const std::vector<double> get_state_history(int number);
 
     public:
         double get_degrees_of_freedom(){
@@ -28,11 +30,10 @@ class System
         std::vector<double>& get_state(){
             return state;
         }
-
         
         virtual void get_right_hand_side(const double time, const std::vector<double>& state, std::vector<double>& right_hand_side) = 0;
         virtual void set_initial_conditions(const double time) = 0;
-        virtual void write_state_to_file(int number, std::filesystem::path folder_name) = 0;
+        virtual void write_state_to_file(int number, std::string folder_name) = 0;
         virtual void record_state() = 0;
         virtual void save_history_to_folder(std::string folder_name) = 0;
 };

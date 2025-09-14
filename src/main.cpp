@@ -98,6 +98,7 @@ void calculate(PendulumSystem* system, double max_time, double integration_step)
     double time_step = 0.1;
     solver.set_up(system, time_step, integration_step);
     solver.solve(max_time);
+    system->save_history_to_folder("vysledek");
 }
 
 void save_image(GLuint texture, PendulumSystem* system, double show_time) {
@@ -135,8 +136,8 @@ int main() {
     ImGui_ImplOpenGL3_Init("#version 130");
 
     std::array<double, 4> bounds = {-PI, PI, -PI, PI};
-    int size_x = 256;
-    int size_y = 256;
+    int size_x = 25;
+    int size_y = 25;
     float show_time = 0;
     float max_time = 1;
     double integration_step = 0.01;
@@ -151,10 +152,10 @@ int main() {
 
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu("File")) {
-                if (ImGui::MenuItem("Save Image")) {
+                if (ImGui::MenuItem("Save image")) {
                     save_image(texture, &system, show_time);
                 }
-                if (ImGui::MenuItem("Reset Image")) {
+                if (ImGui::MenuItem("Reset image")) {
                     glDeleteTextures(1, &texture);
                     system = PendulumSystem(size_x, size_y, bounds, 1.0, 1.0, 1.0, 1.0);
                     calculate(&system, max_time, integration_step);
