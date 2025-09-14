@@ -43,32 +43,32 @@ double normalize_angle(double angle)
     return angle - floor(angle/(2*PI))*2*PI;
 }
 
-void update_texture(GLuint texture, PendulumSystem* system, double show_time) {
+void update_texture(GLuint texture, PendulumSystem* system, int number) {
     glBindTexture(GL_TEXTURE_2D, texture);
 
     int dof = system->get_degrees_of_freedom();
     unsigned char* data = new unsigned char[dof * 3];
-
     int index = 0;
     for (int i = 0; i < system->get_size()[0]; i++) {
+        std::cout << "Here in 2 " << i << std::endl;
         for (int j = 0; j < system->get_size()[1]; j++) {
             index = 3*((system->get_size()[1] - 1 - j)*system->get_size()[0] + i);
 
             data[index] = 0;        // R
             data[index + 1] = 0;    // G
             data[index + 2] = 0;    // B
-            
-            if (normalize_angle(system->get_phi_1(i, j, show_time)) <= PI &&
-                normalize_angle(system->get_phi_2(i, j, show_time)) <= PI) {
+            std::cout << number << std::endl;
+            if (normalize_angle(system->get_phi_1(i, j, number)) <= PI &&
+                normalize_angle(system->get_phi_2(i, j, number)) <= PI) {
                 data[index] = 255;
                 data[index + 1] = 255;
             }
-            else if (normalize_angle(system->get_phi_1(i, j, show_time)) <= PI &&
-                     normalize_angle(system->get_phi_2(i, j, show_time)) > PI) {
+            else if (normalize_angle(system->get_phi_1(i, j, number)) <= PI &&
+                     normalize_angle(system->get_phi_2(i, j, number)) > PI) {
                 data[index] = 255;
             }
-            else if (normalize_angle(system->get_phi_1(i, j, show_time)) > PI &&
-                     normalize_angle(system->get_phi_2(i, j, show_time)) <= PI){
+            else if (normalize_angle(system->get_phi_1(i, j, number)) > PI &&
+                     normalize_angle(system->get_phi_2(i, j, number)) <= PI){
                 data[index + 2] = 255;
             }
             else{
@@ -92,23 +92,23 @@ void update_texture(GLuint texture, PendulumSystem* system, double show_time) {
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-void calculate(PendulumSystem* system, double max_time, double integration_step) {
+void calculate(PendulumSystem* system, double max_time, double integration_step, double time_step) {
     RungeKutta solver;
-    int step_count = max_time * 10;
-    double time_step = 0.1;
     solver.set_up(system, time_step, integration_step);
     solver.solve(max_time);
-    system->save_history_to_folder("vysledek");
+    //system->save_history_to_folder("vysledek");
 }
+
 
 void save_image(GLuint texture, PendulumSystem* system, double show_time) {
     std::vector<unsigned char> pixels(system->get_size()[0] * system->get_size()[1] * 3);
 
     glBindTexture(GL_TEXTURE_2D, texture);
+    glPixelStorei(GL_PACK_ALIGNMENT, 1); // důležité pro zarovnání
     glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
     glBindTexture(GL_TEXTURE_2D, 0);
 
-    std::string filename = "Images/output" + std::to_string(show_time) + ".png";
+    std::string filename = "Images/output_" + std::to_string(show_time) + ".png";
     stbi_write_png(filename.c_str(),
                    system->get_size()[0],
                    system->get_size()[1],
@@ -116,6 +116,35 @@ void save_image(GLuint texture, PendulumSystem* system, double show_time) {
                    pixels.data(),
                    system->get_size()[0] * 3);
 }
+
+/*
+void save_image(GLuint texture, PendulumSystem* system, double show_time) {
+    int width  = system->get_size()[0];
+    int height = system->get_size()[1];
+
+    std::vector<unsigned char> pixels(width * height * 3);
+
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glPixelStorei(GL_PACK_ALIGNMENT, 1); // důležité pro zarovnání
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    // flip (OpenGL → PNG orientace)
+    std::vector<unsigned char> flipped(pixels.size());
+    for (int y = 0; y < height; ++y) {
+        memcpy(&flipped[y * width * 3],
+               &pixels[(height - 1 - y) * width * 3],
+               width * 3);
+    }
+
+    std::string filename = "Images/output_" + std::to_string(show_time) + ".png";
+    if (!stbi_write_png(filename.c_str(), width, height, 3, flipped.data(), width * 3)) {
+        std::cerr << "Chyba: Nepovedlo se uložit PNG " << filename << std::endl;
+    } else {
+        std::cout << "Uložen obrázek: " << filename << std::endl;
+    }
+}*/
+
 
 int main() {
     if (!glfwInit()) return -1;
@@ -136,13 +165,15 @@ int main() {
     ImGui_ImplOpenGL3_Init("#version 130");
 
     std::array<double, 4> bounds = {-PI, PI, -PI, PI};
-    int size_x = 25;
-    int size_y = 25;
+    int size_x = 256;
+    int size_y = 256;
     float show_time = 0;
-    float max_time = 1;
+    float max_time = 0.2;
     double integration_step = 0.01;
+    double time_step = 0.1;
     PendulumSystem system(size_x, size_y, bounds, 1.0, 1.0, 1.0, 1.0);
     GLuint texture = create_texture(&system);
+    std::string output_file_name;
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
@@ -158,9 +189,12 @@ int main() {
                 if (ImGui::MenuItem("Reset image")) {
                     glDeleteTextures(1, &texture);
                     system = PendulumSystem(size_x, size_y, bounds, 1.0, 1.0, 1.0, 1.0);
-                    calculate(&system, max_time, integration_step);
+                    calculate(&system, max_time, integration_step, time_step);
+                    std::cout << "Here in 1" << std::endl;
                     texture = create_texture(&system);
-                    update_texture(texture, &system, show_time);
+                    std::cout << std::round(show_time/time_step) << std::endl;
+                    update_texture(texture, &system, int(std::round(show_time/time_step)));
+                    std::cout << "Here in 3" << std::endl;
                 }
                 ImGui::EndMenu();
             }
@@ -177,7 +211,7 @@ int main() {
             }
             if (ImGui::BeginMenu("View")) {
                 if (ImGui::SliderFloat("Time", &show_time, 0, max_time)) {
-                    update_texture(texture, &system, show_time);
+                    update_texture(texture, &system, std::round(show_time/time_step));
                 }
                 if (ImGui::MenuItem("Animation")) {
                     

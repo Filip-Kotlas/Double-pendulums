@@ -4,6 +4,8 @@
 #include <cmath>
 #include <string>
 #include <stdexcept>
+#include <sstream>
+#include <iostream>
 
 class System
 {
@@ -14,8 +16,8 @@ class System
         std::vector<double> state;
         std::vector<std::vector<double>> state_history;
 
-        const std::vector<double> get_state_history(double time);
-        const std::vector<double> get_state_history(int number);
+        const std::vector<double>& get_state_history(double time);
+        const std::vector<double>& get_state_history(int number);
 
     public:
         double get_degrees_of_freedom(){

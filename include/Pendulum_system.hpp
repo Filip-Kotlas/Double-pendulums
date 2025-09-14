@@ -38,21 +38,6 @@ class PendulumSystem : public System
             return state[(j*size_x + i)*4 + 3];
         }
 
-        double get_phi_1(int i, int j, int number){
-            std::cout << "phi_1" << std::endl;
-            return get_state_history(number)[(j*size_x + i)*4];
-        };
-        double get_phi_2(int i, int j, int number){
-            std::cout << "phi_2" << std::endl;
-            return get_state_history(number)[(j*size_x + i)*4 + 1];
-        };
-        double get_der_phi_1(int i, int j, int number){
-            return get_state_history(number)[(j*size_x + i)*4 + 2];
-        }
-        double get_der_phi_2(int i, int j, int number){
-            return get_state_history(number)[(j*size_x + i)*4 + 3];
-        }
-
         void set_phi_1(int i, int j, double value){
             state[(j*size_x + i)*4] = value;
         }
@@ -103,17 +88,17 @@ class PendulumSystem : public System
         void record_state();
         void save_history_to_folder(std::string folder_name);
 
-        double get_phi_1(int i, int j, double time){
-            return get_state_history(time)[(j*size_x + i)*4];
+        double get_phi_1(int i, int j, int number){
+            return get_state_history(number)[(j*size_x + i)*4];
         };
-        double get_phi_2(int i, int j, double time){
-            return get_state_history(time)[(j*size_x + i)*4 + 1];
+        double get_phi_2(int i, int j, int number){
+            return get_state_history(number)[(j*size_x + i)*4 + 1];
         };
-        double get_der_phi_1(int i, int j, double time){
-            return get_state_history(time)[(j*size_x + i)*4 + 2];
+        double get_der_phi_1(int i, int j, int number){
+            return get_state_history(number)[(j*size_x + i)*4 + 2];
         }
-        double get_der_phi_2(int i, int j, double time){
-            return get_state_history(time)[(j*size_x + i)*4 + 3];
+        double get_der_phi_2(int i, int j, int number){
+            return get_state_history(number)[(j*size_x + i)*4 + 3];
         }
 
 };

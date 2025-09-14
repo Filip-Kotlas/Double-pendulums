@@ -41,7 +41,7 @@ void PendulumSystem::write_state_to_file(int number, std::string folder_name)
         throw std::invalid_argument("Argument number is larger than size of state_history vector.");
 
     std::stringstream file_path;
-    file_path <<  "\\results\\" << folder_name << "\\State_" << std::setw( 5 ) << std::setfill( '0' ) << number << ".txt";
+    file_path <<  "results\\" << folder_name << "\\State_" << std::setw( 5 ) << std::setfill( '0' ) << number << ".txt";
     
     std::fstream file;
     file.open( file_path.str(), std::fstream::out | std::fstream::trunc );
@@ -50,32 +50,28 @@ void PendulumSystem::write_state_to_file(int number, std::string folder_name)
         throw std::ios_base::failure("Unable to open the file: " + file_path.str());
     }
 
-    file << std::scientific << std::setprecision(15);
+    file << std::scientific << std::setprecision(3);
 
     file << this->time << std::endl << std::endl;
     for(int j = 0; j < size_y; j++)
     {
         for( int i = 0; i < size_x; i++ )
         {
-            std::cout << i << " " << j << std::endl;
             file << i << " "
-                << j << " ";
-            std::cout << "Zde ted pred" << std::endl;
-            file << get_phi_1(i, j, number) << " ";
-            std::cout << "Zde ted " << std::endl;
-            file << get_phi_2(i, j, number) << " "
-                << get_der_phi_1(i, j, number) << " "
-                << get_der_phi_2(i, j, number);
+                 << j << " "
+                 << get_phi_1(i, j, number) << " "
+                 << get_phi_2(i, j, number) << " "
+                 << get_der_phi_1(i, j, number) << " "
+                 << get_der_phi_2(i, j, number);
             file << std::endl;
         }
         file << std::endl;
     }
-    std::cout << "Zde 3" << std::endl;
 }
 
 void PendulumSystem::record_state()
 {
-    this->state_history[this->time] = state;
+    this->state_history.push_back(state);
 }
 
 void PendulumSystem::save_history_to_folder(std::string folder_name)
@@ -83,6 +79,5 @@ void PendulumSystem::save_history_to_folder(std::string folder_name)
     for (int i = 0; i < this->state_history.size(); i++)
     {
         write_state_to_file(i, folder_name);
-        std::cout << "Problem not here " << i << std::endl;
     }
 }

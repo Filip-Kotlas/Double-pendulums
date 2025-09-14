@@ -19,8 +19,8 @@ void RungeKutta::solve(double time_max)
     int steps_count = std::ceil((time_max - this->current_system->get_time())/time_step);
     this->current_system->record_state();
     auto clock_computation_start = std::chrono::high_resolution_clock::now();
-    
-    for(int k = 0; k <= steps_count; k++){
+
+    for(int k = 1; k <= steps_count; k++){
         auto clock_step_start = std::chrono::high_resolution_clock::now();
         this->integrate_step(time_max);
         this->current_system->record_state();
