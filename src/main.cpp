@@ -12,7 +12,7 @@
 
 #include "System.hpp"
 #include "Pendulum_system.hpp"
-#include "Merson.hpp"
+#include "RungeKutta.hpp"
 
 constexpr double PI = 3.141592653589793;
 
@@ -24,7 +24,7 @@ GLuint create_texture(PendulumSystem* system) {
     int dof = system->get_degrees_of_freedom();
     unsigned char* data = new unsigned char[dof * 3];
     for(int i = 0; i < system->get_degrees_of_freedom() * 3; i += 3){
-        data[i] = 255;      // R
+        data[i] = 255;        // R
         data[i + 1] = 255;    // G
         data[i + 2] = 255;    // B
     }
@@ -77,11 +77,10 @@ void update_texture(GLuint texture, PendulumSystem* system, double show_time) {
         }
     }
 
-    // Přepíšeme pixely existující textury
     glTexSubImage2D(
         GL_TEXTURE_2D, 
-        0,                  // mipmap level
-        0, 0,               // xoffset, yoffset
+        0,
+        0, 0,
         system->get_size()[0], 
         system->get_size()[1], 
         GL_RGB, 
@@ -94,8 +93,8 @@ void update_texture(GLuint texture, PendulumSystem* system, double show_time) {
 }
 
 void calculate(PendulumSystem* system, double max_time, double integration_step) {
-    Merson solver;
-    int step_count = 100;
+    RungeKutta solver;
+    int step_count = 10;
     double time_step = max_time / step_count;
     solver.set_up(system, time_step, integration_step);
     solver.solve(max_time);
@@ -117,6 +116,11 @@ void save_image(GLuint texture, PendulumSystem* system, double show_time) {
                    system->get_size()[0] * 3);
 }
 
+void save_state_to_txt_file(PendulumSystem* system, double save_time)
+{
+    system->write_state_to_file(save_time, "results");
+}
+
 int main() {
     if (!glfwInit()) return -1;
 
@@ -128,7 +132,6 @@ int main() {
     glfwMakeContextCurrent(window);
     gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
 
-    // ImGui setup
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
@@ -140,11 +143,11 @@ int main() {
     int size_x = 256;
     int size_y = 256;
     float show_time = 0;
-    float max_time = 1;
+    float max_time = 10;
     double integration_step = 0.01;
     PendulumSystem system(size_x, size_y, bounds, 1.0, 1.0, 1.0, 1.0);
-    // Texture
     GLuint texture = create_texture(&system);
+    char txt_file_name[20];
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
@@ -152,13 +155,15 @@ int main() {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        // Menu nahoře
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu("File")) {
-                if (ImGui::MenuItem("Save Image")) {
+                if (ImGui::MenuItem("Save image")) {
                     save_image(texture, &system, show_time);
                 }
-                if (ImGui::MenuItem("Reset Image")) {
+                if (ImGui::MenuItem("Save calculations")) {
+                    save_state_to_txt_file(&system, show_time);
+                }
+                if (ImGui::MenuItem("Reset image")) {
                     glDeleteTextures(1, &texture);
                     system = PendulumSystem(size_x, size_y, bounds, 1.0, 1.0, 1.0, 1.0);
                     calculate(&system, max_time, integration_step);
@@ -182,16 +187,19 @@ int main() {
                 if (ImGui::SliderFloat("Time", &show_time, 0, max_time)) {
                     update_texture(texture, &system, show_time);
                 }
-                if (ImGui::MenuItem("Animation")) {
-                    
+                ImGui::InputText("Input file name", txt_file_name, 20);
+                if (ImGui::MenuItem("Load from file")) {
+                    glDeleteTextures(1, &texture);
+                    PendulumSystem *dummy_system = new PendulumSystem(std::string(txt_file_name));
+                    texture = create_texture(dummy_system);
+                    update_texture(texture, dummy_system, 0);
                 }
                 ImGui::EndMenu();
             }
             ImGui::EndMainMenuBar();
         }
 
-        // Obrázek bez lišty + udržení poměru stran
-        ImGui::SetNextWindowPos(ImVec2(0, ImGui::GetFrameHeight())); // pod menu
+        ImGui::SetNextWindowPos(ImVec2(0, ImGui::GetFrameHeight()));
         ImVec2 viewportSize = ImGui::GetMainViewport()->Size;
         ImGui::SetNextWindowSize(ImVec2(viewportSize.x, viewportSize.y - ImGui::GetFrameHeight()));
         ImGui::Begin("Obrazek", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
@@ -202,16 +210,13 @@ int main() {
 
         ImVec2 imageSize;
         if (windowAspect > imageAspect) {
-            // okno je širší než obrázek -> přizpůsobíme výšku
             imageSize.y = avail.y;
             imageSize.x = imageAspect * avail.y;
         } else {
-            // okno je vyšší než obrázek -> přizpůsobíme šířku
             imageSize.x = avail.x;
             imageSize.y = avail.x / imageAspect;
         }
 
-        // vycentrování
         ImVec2 cursorPos = ImGui::GetCursorPos();
         ImGui::SetCursorPosX(cursorPos.x + (avail.x - imageSize.x) * 0.5f);
         ImGui::SetCursorPosY(cursorPos.y + (avail.y - imageSize.y) * 0.5f);

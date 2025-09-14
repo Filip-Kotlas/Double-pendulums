@@ -1,6 +1,6 @@
-#include "Merson.hpp"
+#include "RungeKutta.hpp"
 
-void Merson::set_up(System *system, double time_step, double integration_step)
+void RungeKutta::set_up(System *system, double time_step, double integration_step)
 {
     int dof = system->get_degrees_of_freedom();
     k1.resize(dof, 0);
@@ -14,7 +14,7 @@ void Merson::set_up(System *system, double time_step, double integration_step)
     this->current_system = system;
 }
 
-void Merson::solve(double time_max)
+void RungeKutta::solve(double time_max)
 {
     int steps_count = std::ceil((time_max - this->current_system->get_time())/time_step);
     this->current_system->record_state();
@@ -45,7 +45,7 @@ void Merson::solve(double time_max)
                   << seconds_remaining << "s" << std::endl;
     }
 }
-void Merson::integrate_step(double time_max)
+void RungeKutta::integrate_step(double time_max)
 {
     double start_time = current_system->get_time();
     while(current_system->get_time() <= std::min(time_max, start_time + this->time_step)){

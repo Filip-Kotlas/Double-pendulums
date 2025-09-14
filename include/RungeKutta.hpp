@@ -9,7 +9,7 @@
 #include <vector>
 #include <chrono>
 
-class Merson
+class RungeKutta
 {
     private:
         std::vector<double> k1;

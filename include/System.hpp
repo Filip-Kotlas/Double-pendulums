@@ -2,6 +2,7 @@
 #include <vector>
 #include <map>
 #include <cmath>
+#include <string>
 
 class System
 {
@@ -29,6 +30,6 @@ class System
 
         virtual void get_right_hand_side(const double time, const std::vector<double>& state, std::vector<double>& right_hand_side) = 0;
         virtual void set_initial_conditions(const double time) = 0;
-        virtual void write_state_to_file(int number) = 0;
+        virtual void write_state_to_file(double save_time, std::string folder_name) = 0;
         virtual void record_state() = 0;
 };

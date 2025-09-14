@@ -43,3 +43,6 @@
 # pictures
 *.png
 *.jpg
+
+# results
+*.txt
