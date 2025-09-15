@@ -55,8 +55,8 @@ void PendulumSystem::get_right_hand_side(const double time, const std::vector<do
 {
     float g = 9.81;
     double a, b, c, d, e, f;
-    for(int i = 0; i < this->size_x; i++){
-        for(int j = 0; j < this->size_y; j++){
+    for(int j = 0; j < this->size_y; j++){
+        for(int i = 0; i < this->size_x; i++){
             a = -(mass_1 + mass_2)*g*length_1*sin(get_phi_1(i, j))
                 - mass_2*length_1*length_2*pow(get_der_phi_2(i, j), 2)*sin(get_phi_1(i, j) - get_phi_2(i, j));
             b = (mass_1 + mass_2)*length_1*length_1;
@@ -76,8 +76,8 @@ void PendulumSystem::get_right_hand_side(const double time, const std::vector<do
 
 void PendulumSystem::set_initial_conditions(const double time)
 {
-    for(int i = 0; i < this->size_x; i++){
-        for(int j = 0; j < this->size_y; j++){
+    for(int j = 0; j < this->size_y; j++){
+        for(int i = 0; i < this->size_x; i++){
             set_der_phi_1(i, j, 0);
             set_der_phi_2(i, j, 0);
             set_phi_1(i, j, bounds[0] + (i + 1)*(bounds[1] - bounds[0])/(size_x + 1));
@@ -101,10 +101,8 @@ void PendulumSystem::write_state_to_file(double save_time, std::string folder_na
     file << std::scientific << std::setprecision(15);
 
     file << this->size_x << std::endl << this->size_y << std::endl << std::endl;
-    for(int j = 0; j < size_y; j++)
-    {
-        for( int i = 0; i < size_x; i++ )
-        {
+    for(int j = 0; j < size_y; j++) {
+        for( int i = 0; i < size_x; i++ ) {
             file << i << " "
                  << j << " "
                  << get_phi_1(i, j, save_time) << " "
