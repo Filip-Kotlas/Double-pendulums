@@ -89,7 +89,7 @@ void PendulumSystem::set_initial_conditions(const double time)
 void PendulumSystem::write_state_to_file(double save_time, std::string folder_name)
 {
     std::stringstream file_path;
-    file_path <<  folder_name << "\\State_" << std::setw( 5 ) << std::setfill( '0' ) << save_time << ".txt";
+    file_path << "State_" << std::setw( 5 ) << std::setfill( '0' ) << save_time << ".txt";
     
     std::fstream file;
     file.open( file_path.str(), std::fstream::out | std::fstream::trunc );
