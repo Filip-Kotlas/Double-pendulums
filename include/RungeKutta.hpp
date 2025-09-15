@@ -8,6 +8,7 @@
 #include <iomanip>
 #include <vector>
 #include <chrono>
+#include <cuda.h>
 
 class RungeKutta
 {
