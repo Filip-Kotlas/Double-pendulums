@@ -145,9 +145,9 @@ int main() {
     float show_time = 0;
     float max_time = 10;
     double integration_step = 0.01;
-    PendulumSystem system(size_x, size_y, bounds, 1.0, 1.0, 1.0, 1.0);
-    GLuint texture = create_texture(&system);
-    char txt_file_name[20];
+    PendulumSystem* system = new PendulumSystem(size_x, size_y, bounds, 1.0, 1.0, 1.0, 1.0);
+    GLuint texture = create_texture(system);
+    char txt_folder_name[20];
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
@@ -158,17 +158,18 @@ int main() {
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu("File")) {
                 if (ImGui::MenuItem("Save image")) {
-                    save_image(texture, &system, show_time);
+                    save_image(texture, system, show_time);
                 }
                 if (ImGui::MenuItem("Save calculations")) {
-                    save_state_to_txt_file(&system, show_time);
+                    save_state_to_txt_file(system, show_time);
                 }
-                if (ImGui::MenuItem("Reset image")) {
+                if (ImGui::MenuItem("Run computation")) {
                     glDeleteTextures(1, &texture);
-                    system = PendulumSystem(size_x, size_y, bounds, 1.0, 1.0, 1.0, 1.0);
-                    calculate(&system, max_time, integration_step);
-                    texture = create_texture(&system);
-                    update_texture(texture, &system, show_time);
+                    delete system;
+                    system = new PendulumSystem(size_x, size_y, bounds, 1.0, 1.0, 1.0, 1.0);
+                    calculate(system, max_time, integration_step);
+                    texture = create_texture(system);
+                    update_texture(texture, system, show_time);
                 }
                 ImGui::EndMenu();
             }
@@ -185,14 +186,16 @@ int main() {
             }
             if (ImGui::BeginMenu("View")) {
                 if (ImGui::SliderFloat("Time", &show_time, 0, max_time)) {
-                    update_texture(texture, &system, show_time);
+                    update_texture(texture, system, show_time);
                 }
-                ImGui::InputText("Input file name", txt_file_name, 20);
-                if (ImGui::MenuItem("Load from file")) {
+                ImGui::InputText("Input file name", txt_folder_name, 20);
+                if (ImGui::MenuItem("Load from folder")) {
                     glDeleteTextures(1, &texture);
-                    PendulumSystem *dummy_system = new PendulumSystem(std::string(txt_file_name));
-                    texture = create_texture(dummy_system);
-                    update_texture(texture, dummy_system, 0);
+                    delete system;
+                    system = new PendulumSystem(std::string(txt_folder_name));
+                    max_time = system->get_time();
+                    texture = create_texture(system);
+                    update_texture(texture, system, 0);
                 }
                 ImGui::EndMenu();
             }
@@ -206,7 +209,7 @@ int main() {
 
         ImVec2 avail = ImGui::GetContentRegionAvail();
         float windowAspect = avail.x / avail.y;
-        float imageAspect  = (float)system.get_size()[0] / (float)system.get_size()[1];
+        float imageAspect  = (float)system->get_size()[0] / (float)system->get_size()[1];
 
         ImVec2 imageSize;
         if (windowAspect > imageAspect) {

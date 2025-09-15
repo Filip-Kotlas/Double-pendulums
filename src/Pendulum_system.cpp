@@ -1,12 +1,23 @@
 #include "Pendulum_system.hpp"
 
-PendulumSystem::PendulumSystem(std::string file_name)
+PendulumSystem::PendulumSystem(std::string folder_name)
 : mass_1(1),
 mass_2(1),
 length_1(1),
 length_2(1)
 {
-    std::ifstream file("results\\" + file_name);
+    std::string folder_path = "results\\" + folder_name;
+    std::stringstream file_name;
+    for (int i = 0; i <= 100; i++) {
+        file_name.str("");
+        file_name << "\\State_" << std::setw(5) << std::setfill('0') << i << ".txt";
+        this->add_state_to_history_from_file(folder_path + file_name.str());
+    }
+}
+
+void PendulumSystem::add_state_to_history_from_file(std::string file_name)
+{
+    std::ifstream file(file_name);
     if (!file)
     {
         std::cout << "File cannot be opened. File: " << file_name << std::endl;
@@ -15,11 +26,13 @@ length_2(1)
     std::string line;
     int count = 0;
     std::getline(file, line);
+    std::istringstream(line) >> this->time;
+    std::getline(file, line);
+    std::getline(file, line);
     std::istringstream(line) >> this->size_x;
     std::getline(file, line);
     std::istringstream(line) >> this->size_y;
     this->degrees_of_freedom = size_x * size_y * 4;
-    this->time = 0;
     state.resize(this->degrees_of_freedom, 0);
 
     int i, j;
@@ -30,11 +43,11 @@ length_2(1)
 
         std::istringstream iss(line);
         if (!(iss >> i >> j >> phi_1 >> phi_2 >> der_phi_1 >> der_phi_2)) {
-            std::cout << "Error while loading line: " << line << std::endl;
+            throw std::runtime_error("Error while loading line: " + line + "\n");
         }
 
         if (count >= this->size_x * this->size_y) {
-            std::cout << "The file contains more data than anticipated." << std::endl;
+            throw std::runtime_error("The file contains more data than anticipated.\n");
         }
 
         set_phi_1(i, j, phi_1);
@@ -46,8 +59,9 @@ length_2(1)
         }
 
     if (count < this->size_x * this->size_y) {
-        std::cout << "The file constains less data than anticipated." << std::endl;
+        throw std::runtime_error("The file constains less data than anticipated.\n");
     }
+    file.close();
     this->record_state();
 }
 

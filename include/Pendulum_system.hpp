@@ -74,7 +74,8 @@ class PendulumSystem : public System
         }
 
         // construction from data in txt file
-        PendulumSystem(std::string file_name);
+        PendulumSystem(std::string folder_name);
+        void add_state_to_history_from_file(std::string file_name);
 
         std::array<int, 2> get_size(){
             return {this->size_x, this->size_y};
