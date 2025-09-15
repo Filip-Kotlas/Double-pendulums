@@ -5,13 +5,16 @@ CXXFLAGS = -Iinclude -std=c++17 $(PROFFLAGS)
 BIN_DIR = build
 APP ?= Double-pendulums
 
-SRC = $(wildcard src/*.cu)
+SRC = $(wildcard src/*.cu) $(wildcard src/*.cpp) $(wildcard src/*.c)
 
 OBJ = $(patsubst %.cu,$(BIN_DIR)/%.o,$(notdir $(filter %.cu,$(SRC)))) \
-      $(patsubst %.c,$(BIN_DIR)/%.o,$(notdir $(filter %.c,$(SRC))))
+      $(patsubst %.c,$(BIN_DIR)/%.o,$(notdir $(filter %.c,$(SRC)))) \
+      $(patsubst %.cpp,$(BIN_DIR)/%.o,$(notdir $(filter %.cpp,$(SRC))))
 
 vpath %.cu $(sort $(dir $(filter %.cu,$(SRC))))
 vpath %.c   $(sort $(dir $(filter %.c,$(SRC))))
+vpath %.cpp $(sort $(dir $(filter %.cpp,$(SRC))))
+
 
 all: $(BIN_DIR)/$(APP)
 
@@ -24,6 +27,10 @@ $(BIN_DIR)/%.o: %.cu
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 $(BIN_DIR)/%.o: %.c
+	@mkdir -p $(BIN_DIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+$(BIN_DIR)/%.o: %.cpp
 	@mkdir -p $(BIN_DIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 

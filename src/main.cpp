@@ -12,8 +12,8 @@ int main() {
     std::array<double, 4> bounds = {-PI, PI, -PI, PI};
     int size_x = 250;
     int size_y = 250;
-    float max_time = 10.0;
-    double integration_step = 0.001;
+    float max_time = 40.0;
+    double integration_step = 0.00001;
     PendulumSystem system(size_x, size_y, bounds, 1.0, 1.0, 1.0, 1.0);
     std::string txt_file_name = "";
     RungeKutta solver;

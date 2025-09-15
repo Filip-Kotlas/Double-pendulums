@@ -12,6 +12,16 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <cuda_runtime.h>
+#include <cuda.h>
+
+__global__ void cuda_right_hand_side(const double* state,
+                                     double* right_hand_side,
+                                     int size,
+                                     double mass_1=1,
+                                     double mass_2=1,
+                                     double length_1=1,
+                                     double length_2=1);
 
 class PendulumSystem : public System
 {
@@ -25,29 +35,29 @@ class PendulumSystem : public System
         std::array<double, 4> bounds;
 
         double get_phi_1(int i, int j){
-            return state[(j*size_x + i)*4];
+            return host_state[(j*size_x + i)*4];
         };
         double get_phi_2(int i, int j){
-            return state[(j*size_x + i)*4 + 1];
+            return host_state[(j*size_x + i)*4 + 1];
         };
         double get_der_phi_1(int i, int j){
-            return state[(j*size_x + i)*4 + 2];
+            return host_state[(j*size_x + i)*4 + 2];
         }
         double get_der_phi_2(int i, int j){
-            return state[(j*size_x + i)*4 + 3];
+            return host_state[(j*size_x + i)*4 + 3];
         }
 
         void set_phi_1(int i, int j, double value){
-            state[(j*size_x + i)*4] = value;
+            host_state[(j*size_x + i)*4] = value;
         }
         void set_phi_2(int i, int j, double value){
-            state[(j*size_x + i)*4 + 1] = value;
+            host_state[(j*size_x + i)*4 + 1] = value;
         }
         void set_der_phi_1(int i, int j, double value){
-            state[(j*size_x + i)*4 + 2] = value;
+            host_state[(j*size_x + i)*4 + 2] = value;
         }
         void set_der_phi_2(int i, int j, double value){
-            state[(j*size_x + i)*4 + 3] = value;
+            host_state[(j*size_x + i)*4 + 3] = value;
         }
 
     public:
@@ -68,22 +78,27 @@ class PendulumSystem : public System
         length_2(length_2)
         {
             this->degrees_of_freedom = size_x * size_y * 4;
-            time = 0;
-            state.resize(this->degrees_of_freedom, 0);
+            this->time = 0;
+            this->host_state.resize(this->degrees_of_freedom);
             this->set_initial_conditions(time);
+            this->cuda_state.resize(this->degrees_of_freedom);
+            this->cuda_state.copy_from_host(this->host_state);
         }
 
         // construction from data in txt file
-        PendulumSystem(std::string file_name);
+        //PendulumSystem(std::string file_name);
 
         std::array<int, 2> get_size(){
             return {this->size_x, this->size_y};
         }
 
-        void get_right_hand_side(const double time, const std::vector<double>& state, std::vector<double>& right_hand_side);
+        void get_right_hand_side(const double time, const CudaArray &state, CudaArray &right_hand_side);
         void set_initial_conditions(const double time);
         void write_state_to_file(double save_time, std::string folder_name);
         void record_state();
+        void copy_data_from_device_to_host() {
+            this->host_state = this->cuda_state.copy_to_host();
+        }
 
         double get_phi_1(int i, int j, double time){
             return get_state_history(time)[(j*size_x + i)*4];
