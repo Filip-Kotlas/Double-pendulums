@@ -38,7 +38,7 @@ class System
 
         virtual void get_right_hand_side(const double time, const CudaArray &state, CudaArray &right_hand_side) = 0;
         virtual void set_initial_conditions(const double time) = 0;
-        virtual void write_state_to_file(double save_time, std::string folder_name) = 0;
+        virtual void write_state_to_file(double save_time, double time_step, std::string folder_name) = 0;
         virtual void record_state() = 0;
         virtual void copy_data_from_device_to_host() = 0;
 };

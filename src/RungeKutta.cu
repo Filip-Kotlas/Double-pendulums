@@ -14,17 +14,19 @@ void RungeKutta::set_up(System *system, double time_step, double integration_ste
     this->current_system = system;
 }
 
-void RungeKutta::solve(double time_max)
+void RungeKutta::solve(double time_max, std::string output_folder)
 {
-    int steps_count = std::round((time_max - this->current_system->get_time())/time_step);
+    int steps_count = std::round((time_max - this->current_system->get_time())/this->time_step);
     this->current_system->record_state();
     auto clock_computation_start = std::chrono::high_resolution_clock::now();
-    
+    this->current_system->write_state_to_file(this->current_system->get_time(), this->time_step, output_folder);
+
     for(int k = 1; k <= steps_count; k++){
         auto clock_step_start = std::chrono::high_resolution_clock::now();
         this->integrate_step(time_max);
         this->current_system->copy_data_from_device_to_host();
         this->current_system->record_state();
+        this->current_system->write_state_to_file(this->current_system->get_time(), time_step, output_folder);
         auto clock_step_end = std::chrono::high_resolution_clock::now();
 
         double time_per_step = (std::chrono::duration<double>(clock_step_end - clock_step_start).count());

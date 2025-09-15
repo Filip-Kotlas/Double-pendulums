@@ -14,6 +14,7 @@
 #include <vector>
 #include <cuda_runtime.h>
 #include <cuda.h>
+#include <filesystem>
 
 __global__ void cuda_right_hand_side(const double* state,
                                      double* right_hand_side,
@@ -94,7 +95,7 @@ class PendulumSystem : public System
 
         void get_right_hand_side(const double time, const CudaArray &state, CudaArray &right_hand_side);
         void set_initial_conditions(const double time);
-        void write_state_to_file(double save_time, std::string folder_name);
+        void write_state_to_file(double save_time, double time_step, std::string folder_name);
         void record_state();
         void copy_data_from_device_to_host() {
             this->host_state = this->cuda_state.copy_to_host();
