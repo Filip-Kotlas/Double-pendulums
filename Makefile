@@ -1,7 +1,7 @@
 CXX = nvcc
-PROFFLAGS =
+PROFFLAGS=
 CXXFLAGS = -Iinclude -std=c++17 $(PROFFLAGS)
-OUTPUT_FILE ?= output
+OUTPUT ?= output
 
 BIN_DIR = build
 APP ?= Double-pendulums
@@ -37,7 +37,7 @@ $(BIN_DIR)/%.o: %.cpp
 
 .PHONY: run
 run: $(BIN_DIR)/$(APP)
-	./$(BIN_DIR)/$(APP) $(OUTPUT_FILE)
+	./$(BIN_DIR)/$(APP) $(OUTPUT)
 
 .PHONY: clean
 clean:
