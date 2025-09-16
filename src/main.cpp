@@ -13,7 +13,7 @@ int main(int argc, char* argv[]) {
     int size_x = 250;
     int size_y = 250;
     float max_time = 10.0;
-    double integration_step = 0.0001;
+    double integration_step = 0.001;
     PendulumSystem system(size_x, size_y, bounds, 1.0, 1.0, 1.0, 1.0);
     std::string txt_file_name = "";
     RungeKutta solver;
