@@ -7,22 +7,20 @@
 
 constexpr double PI = 3.141592653589793;
 
-int main() {
-    
+int main(int argc, char* argv[]) {
+
     std::array<double, 4> bounds = {-PI, PI, -PI, PI};
     int size_x = 250;
     int size_y = 250;
     float max_time = 10.0;
     double integration_step = 0.001;
     PendulumSystem system(size_x, size_y, bounds, 1.0, 1.0, 1.0, 1.0);
-    std::string txt_file_name = "";
     RungeKutta solver;
     int step_count = 100;
     double time_step = max_time / step_count;
 
     solver.set_up(&system, time_step, integration_step);
-    solver.solve(max_time);
-    system.write_state_to_file(max_time, "results");
+    solver.solve(max_time, argv[1]);
 
     return 0;
 }

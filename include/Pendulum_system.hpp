@@ -12,6 +12,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <filesystem>
 
 class PendulumSystem : public System
 {
@@ -82,7 +83,7 @@ class PendulumSystem : public System
 
         void get_right_hand_side(const double time, const std::vector<double>& state, std::vector<double>& right_hand_side);
         void set_initial_conditions(const double time);
-        void write_state_to_file(double save_time, std::string folder_name);
+        void write_state_to_file(double save_time, double time_step, std::string folder_name);
         void record_state();
 
         double get_phi_1(int i, int j, double time){
@@ -97,5 +98,4 @@ class PendulumSystem : public System
         double get_der_phi_2(int i, int j, double time){
             return get_state_history(time)[(j*size_x + i)*4 + 3];
         }
-        
 };

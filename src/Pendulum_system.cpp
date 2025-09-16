@@ -86,20 +86,24 @@ void PendulumSystem::set_initial_conditions(const double time)
     }
 }
 
-void PendulumSystem::write_state_to_file(double save_time, std::string folder_name)
+void PendulumSystem::write_state_to_file(double save_time, double time_step, std::string folder_name)
 {
-    std::stringstream file_path;
-    file_path << "State_" << std::setw( 5 ) << std::setfill( '0' ) << save_time << ".txt";
+    std::filesystem::path results_path("results");
+    std::filesystem::path dir_path = results_path / folder_name;
+    std::filesystem::create_directories(dir_path);
+    std::stringstream file_name;
+    file_name << "State_" << std::setw(5) << std::setfill('0') << std::round(save_time/time_step) << ".txt";
+    std::filesystem::path file_path = dir_path / file_name.str();
     
     std::fstream file;
-    file.open( file_path.str(), std::fstream::out | std::fstream::trunc );
+    file.open( file_path, std::fstream::out | std::fstream::trunc );
     if(!file)
     {
-        throw std::ios_base::failure("Unable to open the file: " + file_path.str());
+        throw std::ios_base::failure("Unable to open the file: " + file_path.string());
     }
 
     file << std::scientific << std::setprecision(15);
-
+    file << save_time << std::endl << std::endl;
     file << this->size_x << std::endl << this->size_y << std::endl << std::endl;
     for(int j = 0; j < size_y; j++) {
         for( int i = 0; i < size_x; i++ ) {
@@ -115,7 +119,6 @@ void PendulumSystem::write_state_to_file(double save_time, std::string folder_na
     }
 }
 
-void PendulumSystem::record_state()
-{
+void PendulumSystem::record_state() {
     this->state_history[this->time] = state;
 }

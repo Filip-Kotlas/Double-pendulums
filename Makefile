@@ -1,6 +1,6 @@
 CXX = g++
 CXXFLAGS = -Iinclude -std=c++17
-
+OUTPUT ?= output
 BIN_DIR = build
 APP ?= Double-pendulums
 
@@ -28,7 +28,7 @@ $(BIN_DIR)/%.o: %.c
 
 .PHONY: run
 run: $(BIN_DIR)/$(APP)
-	./$(BIN_DIR)/$(APP)
+	./$(BIN_DIR)/$(APP) $(OUTPUT)
 
 .PHONY: clean
 clean:

@@ -25,6 +25,6 @@ class RungeKutta
     
     public:
         void set_up(System *system, double time_step, double integration_step);
-        void solve(double time_max);
+        void solve(double time_max, std::string output_folder);
         void integrate_step(double time_max);
 };
