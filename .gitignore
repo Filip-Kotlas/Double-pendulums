@@ -44,7 +44,5 @@
 *.png
 *.jpg
 
-# results
-*.txt
-
 build/
+results/
