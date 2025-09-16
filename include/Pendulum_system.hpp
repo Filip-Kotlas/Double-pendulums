@@ -1,7 +1,5 @@
 #pragma once
 
-#include "System.hpp"
-
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -13,10 +11,18 @@
 #include <string>
 #include <vector>
 #include <filesystem>
+#include <map>
 
-class PendulumSystem : public System
+
+class PendulumSystem
 {
     private:
+        int degrees_of_freedom;
+        double time;
+        std::vector<double> state;
+        std::map<double, std::vector<double>> state_history;
+        const std::vector<double>& get_state_history(double time);
+
         int size_x;
         int size_y;
         double mass_1;
@@ -79,6 +85,19 @@ class PendulumSystem : public System
 
         std::array<int, 2> get_size(){
             return {this->size_x, this->size_y};
+        }
+
+        double get_degrees_of_freedom(){
+            return degrees_of_freedom;
+        };
+        double get_time(){
+            return time;
+        };
+        void increase_time(double time_increase){
+            time += time_increase;
+        }
+        std::vector<double>& get_state(){
+            return state;
         }
 
         void get_right_hand_side(const double time, const std::vector<double>& state, std::vector<double>& right_hand_side);

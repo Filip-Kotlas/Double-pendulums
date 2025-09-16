@@ -1,6 +1,6 @@
 #include "RungeKutta.hpp"
 
-void RungeKutta::set_up(System *system, double time_step, double integration_step)
+void RungeKutta::set_up(PendulumSystem *system, double time_step, double integration_step)
 {
     int dof = system->get_degrees_of_freedom();
     k1.resize(dof, 0);
