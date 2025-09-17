@@ -15,7 +15,6 @@ int main(int argc, char* argv[]) {
     float max_time = 10.0;
     double integration_step = 0.001;
     PendulumSystem system(size_x, size_y, bounds, 1.0, 1.0, 1.0, 1.0);
-    std::string txt_file_name = "";
     RungeKutta solver;
     int step_count = 100;
     double time_step = max_time / step_count;
