@@ -12,8 +12,12 @@ constexpr double PI = 3.141592653589793;
 
 Window::Window(int width, int height, const char* title)
     : bounds_{-PI, PI, -PI, PI},
-      size_x_{256}, size_y_{256},
-      show_time_{0.f}, max_time_{10.f}, integration_step_{0.01} {
+      size_x_{256},
+      size_y_{256},
+      show_time_{0.f},
+      max_time_{10.f},
+      integration_step_{0.01},
+      steps_per_second_{10}{
 
     init_glfw_glad(title, width, height);
     init_imgui();
@@ -97,33 +101,17 @@ void Window::update_texture(double show_time) {
     if (!texture_ || !system_) return;
     glBindTexture(GL_TEXTURE_2D, texture_);
 
-    int dof = system_->get_degrees_of_freedom();
-    std::vector<unsigned char> data(dof * 3);
+    int width  = system_->get_size()[0];
+    int height = system_->get_size()[1];
+    std::vector<unsigned char> data(width * height * 3);
 
-    for (int i = 0; i < system_->get_size()[0]; i++) {
-        for (int j = 0; j < system_->get_size()[1]; j++) {
-            int index = 3 * ((system_->get_size()[1] - 1 - j) * system_->get_size()[0] + i);
-
-            data[index] = 0;        // R
-            data[index + 1] = 0;    // G
-            data[index + 2] = 0;    // B
-
-            double phi1 = normalize_angle(system_->get_phi_1(i, j, show_time));
-            double phi2 = normalize_angle(system_->get_phi_2(i, j, show_time));
-
-            if (phi1 <= PI && phi2 <= PI) {
-                data[index] = 255;
-                data[index + 1] = 255;
-            }
-            else if (phi1 <= PI && phi2 > PI) {
-                data[index] = 255;
-            }
-            else if (phi1 > PI && phi2 <= PI){
-                data[index + 2] = 255;
-            }
-            else{
-                data[index + 1] = 255;
-            }
+    for (int i = 0; i < width; i++) {
+        for (int j = 0; j < height; j++) {
+            int index = 3 * ((height - 1 - j) * width + i);
+            auto color = determine_pixel_color(i, j, show_time);
+            data[index]     = color[0];
+            data[index + 1] = color[1];
+            data[index + 2] = color[2];
         }
     }
 
@@ -131,8 +119,8 @@ void Window::update_texture(double show_time) {
         GL_TEXTURE_2D,
         0,
         0, 0,
-        system_->get_size()[0],
-        system_->get_size()[1],
+        width,
+        height,
         GL_RGB,
         GL_UNSIGNED_BYTE,
         data.data()
@@ -141,11 +129,11 @@ void Window::update_texture(double show_time) {
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
+
 void Window::calculate() {
     if (system_) {
         RungeKutta solver;
-        int step_count = 100;
-        double time_step = max_time_ / step_count;
+        double time_step = 1.0 / this->steps_per_second_;
         solver.set_up(system_, time_step, integration_step_);
         solver.solve(max_time_);
     }
@@ -175,94 +163,166 @@ void Window::save_state_to_txt_file(double save_time)
     system_->write_state_to_file(save_time, "results");
 }
 
-void Window::run() {
-    while (!glfwWindowShouldClose(window_)) {
-        glfwPollEvents();
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
+void Window::process_events() {
+    glfwPollEvents();
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+}
 
-        if (ImGui::BeginMainMenuBar()) {
-            if (ImGui::BeginMenu("File")) {
-                if (ImGui::MenuItem("Save image")) {
-                    save_image(show_time_);
-                }
-                if (ImGui::MenuItem("Save calculations")) {
-                    save_state_to_txt_file(show_time_);
-                }
+void Window::render_main_menu() {
+    if (ImGui::BeginMainMenuBar()) {
+        if (ImGui::BeginMenu("File")) {
+            if (ImGui::MenuItem("Save image")) {
+                save_image(show_time_);
+            }
+            if (ImGui::MenuItem("Save calculations")) {
+                save_state_to_txt_file(show_time_);
+            }
+            if (!computing_) {
                 if (ImGui::MenuItem("Run computation")) {
                     if (texture_) { glDeleteTextures(1, &texture_); texture_ = 0; }
                     delete system_;
                     system_ = new PendulumSystem(size_x_, size_y_, bounds_, 1.0, 1.0, 1.0, 1.0);
-                    calculate();
-                    texture_ = create_texture();
-                    update_texture(show_time_);
+
+                    computing_ = true;
+                    cancel_ = false;
+                    progress_ = 0.0f;
+
+                    worker_ = std::async(std::launch::async, &Window::compute_task, this);
                 }
-                ImGui::EndMenu();
-            }
-            if (ImGui::BeginMenu("Parameters")) {
-                ImGui::InputDouble("Left bound",  &bounds_[0]);
-                ImGui::InputDouble("Right bound", &bounds_[1]);
-                ImGui::InputDouble("Lower bound", &bounds_[2]);
-                ImGui::InputDouble("Upper bound", &bounds_[3]);
-                ImGui::InputInt("Size in x direction", &size_x_);
-                ImGui::InputInt("Size in y direction", &size_y_);
-                ImGui::InputFloat("Maximum time", &max_time_);
-                ImGui::InputDouble("Integration step", &integration_step_);
-                ImGui::EndMenu();
-            }
-            if (ImGui::BeginMenu("View")) {
-                if (ImGui::SliderFloat("Time", &show_time_, 0, max_time_)) {
-                    update_texture(show_time_);
+            } else {
+                if (ImGui::MenuItem("Cancel computation")) {
+                    cancel_ = true;
                 }
-                ImGui::InputText("Input file name", txt_folder_name_, sizeof(txt_folder_name_));
-                if (ImGui::MenuItem("Load from folder")) {
+                ImGui::ProgressBar(progress_, ImVec2(0.0f, 0.0f));
+            }
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Parameters")) {
+            ImGui::InputDouble("Left bound",  &bounds_[0]);
+            ImGui::InputDouble("Right bound", &bounds_[1]);
+            ImGui::InputDouble("Lower bound", &bounds_[2]);
+            ImGui::InputDouble("Upper bound", &bounds_[3]);
+            ImGui::InputInt("Size in x direction", &size_x_);
+            ImGui::InputInt("Size in y direction", &size_y_);
+            ImGui::InputFloat("Maximum time", &max_time_);
+            ImGui::InputDouble("Integration step", &integration_step_);
+            ImGui::SliderInt("Step count", &steps_per_second_, 1, 60);
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("View")) {
+            if (finished_) {
+                if (ImGui::MenuItem("Render results")) {
                     if (texture_) { glDeleteTextures(1, &texture_); texture_ = 0; }
-                    delete system_;
-                    system_ = new PendulumSystem(std::string(txt_folder_name_));
-                    max_time_ = static_cast<float>(system_->get_time());
                     texture_ = create_texture();
-                    update_texture(0.0);
+                    update_texture(show_time_);
+                    finished_ = false;
                 }
-                ImGui::EndMenu();
             }
-            ImGui::EndMainMenuBar();
+            if (ImGui::SliderFloat("Time", &show_time_, 0, max_time_)) {
+                update_texture(show_time_);
+            }
+            ImGui::InputText("Input file name", txt_folder_name_, sizeof(txt_folder_name_));
+            if (ImGui::MenuItem("Load from folder")) {
+                if (texture_) { glDeleteTextures(1, &texture_); texture_ = 0; }
+                delete system_;
+                system_ = new PendulumSystem(std::string(txt_folder_name_));
+                max_time_ = static_cast<float>(system_->get_time());
+                texture_ = create_texture();
+                update_texture(0.0);
+            }
+            ImGui::EndMenu();
         }
-
-        ImGui::SetNextWindowPos(ImVec2(0, ImGui::GetFrameHeight()));
-        ImVec2 viewportSize = ImGui::GetMainViewport()->Size;
-        ImGui::SetNextWindowSize(ImVec2(viewportSize.x, viewportSize.y - ImGui::GetFrameHeight()));
-        ImGui::Begin("Obrazek", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
-
-        ImVec2 avail = ImGui::GetContentRegionAvail();
-        float windowAspect = avail.x / avail.y;
-        float imageAspect  = static_cast<float>(system_->get_size()[0]) / static_cast<float>(system_->get_size()[1]);
-
-        ImVec2 imageSize;
-        if (windowAspect > imageAspect) {
-            imageSize.y = avail.y;
-            imageSize.x = imageAspect * avail.y;
-        } else {
-            imageSize.x = avail.x;
-            imageSize.y = avail.x / imageAspect;
-        }
-
-        ImVec2 cursorPos = ImGui::GetCursorPos();
-        ImGui::SetCursorPosX(cursorPos.x + (avail.x - imageSize.x) * 0.5f);
-        ImGui::SetCursorPosY(cursorPos.y + (avail.y - imageSize.y) * 0.5f);
-
-        ImGui::Image((void*)(intptr_t)texture_, imageSize);
-        ImGui::End();
-
-        ImGui::Render();
-        int display_w, display_h;
-        glfwGetFramebufferSize(window_, &display_w, &display_h);
-        glViewport(0, 0, display_w, display_h);
-        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-        glfwSwapBuffers(window_);
+        ImGui::EndMainMenuBar();
     }
+}
+
+void Window::compute_task() {
+    RungeKutta solver;
+    double time_step = 1.0 / steps_per_second_;
+    solver.set_up(system_, time_step, integration_step_);
+    system_->record_state();
+
+    int steps_count = max_time_ * steps_per_second_;
+    for (int step = 0; step <= steps_count; ++step) {
+        if (cancel_)
+            break;
+        solver.integrate_step(max_time_);
+        system_->record_state();
+        progress_ = float(step + 1) / steps_count;
+    }
+
+    computing_ = false;
+    finished_ = true;
+}
+
+void Window::render_image_window() {
+    ImGui::SetNextWindowPos(ImVec2(0, ImGui::GetFrameHeight()));
+    ImVec2 viewportSize = ImGui::GetMainViewport()->Size;
+    ImGui::SetNextWindowSize(ImVec2(viewportSize.x, viewportSize.y - ImGui::GetFrameHeight()));
+    ImGui::Begin("Obrazek", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
+
+    ImVec2 avail = ImGui::GetContentRegionAvail();
+    float windowAspect = avail.x / avail.y;
+    float imageAspect  = static_cast<float>(system_->get_size()[0]) / static_cast<float>(system_->get_size()[1]);
+
+    ImVec2 imageSize;
+    if (windowAspect > imageAspect) {
+        imageSize.y = avail.y;
+        imageSize.x = imageAspect * avail.y;
+    } else {
+        imageSize.x = avail.x;
+        imageSize.y = avail.x / imageAspect;
+    }
+
+    ImVec2 cursorPos = ImGui::GetCursorPos();
+    ImGui::SetCursorPosX(cursorPos.x + (avail.x - imageSize.x) * 0.5f);
+    ImGui::SetCursorPosY(cursorPos.y + (avail.y - imageSize.y) * 0.5f);
+
+    ImGui::Image((void*)(intptr_t)texture_, imageSize);
+    ImGui::End();
+}
+
+void Window::render_frame() {
+    ImGui::Render();
+    int display_w, display_h;
+    glfwGetFramebufferSize(window_, &display_w, &display_h);
+    glViewport(0, 0, display_w, display_h);
+    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    glfwSwapBuffers(window_);
+}
+
+void Window::run() {
+    while (!glfwWindowShouldClose(window_)) {
+        process_events();
+        render_main_menu();
+        render_image_window();
+        render_frame();
+    }
+}
+
+std::array<unsigned char, 3> Window::determine_pixel_color(int i, int j, double show_time) const {
+    double phi1 = normalize_angle(system_->get_phi_1(i, j, show_time));
+    double phi2 = normalize_angle(system_->get_phi_2(i, j, show_time));
+
+    // Výchozí černá
+    std::array<unsigned char, 3> color = {0, 0, 0};
+
+    if (phi1 <= PI && phi2 <= PI) {
+        color = {255, 255, 0}; // žlutá (R+G)
+    }
+    else if (phi1 <= PI && phi2 > PI) {
+        color = {255, 0, 0};   // červená
+    }
+    else if (phi1 > PI && phi2 <= PI) {
+        color = {0, 0, 255};   // modrá
+    }
+    else {
+        color = {0, 255, 0};   // zelená
+    }
+    return color;
 }

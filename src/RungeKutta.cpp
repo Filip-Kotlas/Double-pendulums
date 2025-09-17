@@ -20,31 +20,43 @@ void RungeKutta::solve(double time_max)
     this->current_system->record_state();
     auto clock_computation_start = std::chrono::high_resolution_clock::now();
     
-    for(int k = 0; k <= steps_count; k++){
+    for (int k = 0; k <= steps_count; k++) {
         auto clock_step_start = std::chrono::high_resolution_clock::now();
+
         this->integrate_step(time_max);
         this->current_system->record_state();
+
         auto clock_step_end = std::chrono::high_resolution_clock::now();
 
-        double time_per_step = (std::chrono::duration<double>(clock_step_end - clock_step_start).count());
-        double remaining_time = time_per_step * (steps_count - k);
-        int hours_remaining = static_cast<int>(remaining_time) / 3600;
-        int minutes_remaining = (static_cast<int>(remaining_time) % 3600) / 60;
-        int seconds_remaining = remaining_time - (hours_remaining * 3600 + minutes_remaining * 60);
-
-        double elapsed_time = (std::chrono::duration<double>(clock_step_end - clock_computation_start).count());
-        int hours_elapsed = static_cast<int>(elapsed_time) / 3600;
-        int minutes_elapsed = (static_cast<int>(elapsed_time) % 3600) / 60;
-        int seconds_elapsed = elapsed_time - (hours_elapsed * 3600 + minutes_elapsed * 60);
-
-        std::cout << "Steps completed: " << k << " / " << steps_count << " => " << std::fixed
-                  << std::setprecision(2) << (double) k / (double) steps_count * 100.0 << "% ";
-        std::cout << "     Time elapsed: " << hours_elapsed << "h " << minutes_elapsed << "m "
-                  << seconds_elapsed << "s";
-        std::cout << "     Time remaining: " << hours_remaining << "h " << minutes_remaining << "m "
-                  << seconds_remaining << "s" << std::endl;
+        print_progress(k, steps_count, clock_computation_start, clock_step_start, clock_step_end);
     }
 }
+
+void RungeKutta::print_progress(int step, int steps_count,
+                                std::chrono::high_resolution_clock::time_point start,
+                                std::chrono::high_resolution_clock::time_point step_start,
+                                std::chrono::high_resolution_clock::time_point step_end) 
+{
+    double time_per_step = (std::chrono::duration<double>(step_end - step_start).count());
+    double remaining_time = time_per_step * (steps_count - step);
+
+    double elapsed_time = (std::chrono::duration<double>(step_end - start).count());
+
+    int hours_remaining = static_cast<int>(remaining_time) / 3600;
+    int minutes_remaining = (static_cast<int>(remaining_time) % 3600) / 60;
+    int seconds_remaining = static_cast<int>(remaining_time) % 60;
+
+    int hours_elapsed = static_cast<int>(elapsed_time) / 3600;
+    int minutes_elapsed = (static_cast<int>(elapsed_time) % 3600) / 60;
+    int seconds_elapsed = static_cast<int>(elapsed_time) % 60;
+
+    std::cout << "Steps completed: " << step << " / " << steps_count
+              << " => " << std::fixed << std::setprecision(2)
+              << (double) step / (double) steps_count * 100.0 << "% ";
+    std::cout << "     Time elapsed: " << hours_elapsed << "h " << minutes_elapsed << "m " << seconds_elapsed << "s";
+    std::cout << "     Time remaining: " << hours_remaining << "h " << minutes_remaining << "m " << seconds_remaining << "s\n";
+}
+
 
 void RungeKutta::integrate_step(double time_max)
 {

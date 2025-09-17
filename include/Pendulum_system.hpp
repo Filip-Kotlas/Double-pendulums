@@ -24,16 +24,16 @@ class PendulumSystem : public System
         double length_2;
         std::array<double, 4> bounds;
 
-        double get_phi_1(int i, int j){
+        double get_phi_1(int i, int j) const {
             return state[(j*size_x + i)*4];
         };
-        double get_phi_2(int i, int j){
+        double get_phi_2(int i, int j) const {
             return state[(j*size_x + i)*4 + 1];
         };
-        double get_der_phi_1(int i, int j){
+        double get_der_phi_1(int i, int j) const {
             return state[(j*size_x + i)*4 + 2];
         }
-        double get_der_phi_2(int i, int j){
+        double get_der_phi_2(int i, int j) const {
             return state[(j*size_x + i)*4 + 3];
         }
 
@@ -77,7 +77,7 @@ class PendulumSystem : public System
         PendulumSystem(std::string folder_name);
         void add_state_to_history_from_file(std::string file_name);
 
-        std::array<int, 2> get_size(){
+        std::array<int, 2> get_size() const {
             return {this->size_x, this->size_y};
         }
 
@@ -86,16 +86,16 @@ class PendulumSystem : public System
         void write_state_to_file(double save_time, std::string folder_name);
         void record_state();
 
-        double get_phi_1(int i, int j, double time){
+        double get_phi_1(int i, int j, double time) const {
             return get_state_history(time)[(j*size_x + i)*4];
         }
-        double get_phi_2(int i, int j, double time){
+        double get_phi_2(int i, int j, double time) const {
             return get_state_history(time)[(j*size_x + i)*4 + 1];
         }
-        double get_der_phi_1(int i, int j, double time){
+        double get_der_phi_1(int i, int j, double time) const {
             return get_state_history(time)[(j*size_x + i)*4 + 2];
         }
-        double get_der_phi_2(int i, int j, double time){
+        double get_der_phi_2(int i, int j, double time) const {
             return get_state_history(time)[(j*size_x + i)*4 + 3];
         }
         

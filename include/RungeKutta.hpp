@@ -27,4 +27,9 @@ class RungeKutta
         void set_up(System *system, double time_step, double integration_step);
         void solve(double time_max);
         void integrate_step(double time_max);
+        void print_progress(int step, int steps_count,
+                    std::chrono::high_resolution_clock::time_point start,
+                    std::chrono::high_resolution_clock::time_point step_start,
+                    std::chrono::high_resolution_clock::time_point step_end);
+
 };

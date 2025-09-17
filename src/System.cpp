@@ -3,7 +3,7 @@
 #include <cmath>
 #include <map>
 
-const std::vector<double>& System::get_state_history(double time) {
+const std::vector<double>& System::get_state_history(double time) const {
     if (state_history.empty()) {
         throw std::runtime_error("State history is empty");
     }
