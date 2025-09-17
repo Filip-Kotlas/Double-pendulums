@@ -1,5 +1,7 @@
 CXX = g++
-CXXFLAGS = -Iinclude -std=c++17
+PROFFLAGS ?=
+CXXFLAGS = -Iinclude -std=c++17 $(PROFFLAGS)
+LDFLAGS = $(PROFFLAGS)
 OUTPUT ?= output
 BIN_DIR = build
 APP ?= Double-pendulums
