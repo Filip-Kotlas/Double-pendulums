@@ -44,5 +44,4 @@
 *.png
 *.jpg
 
-# results
-*.txt
+\results
