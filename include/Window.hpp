@@ -33,10 +33,11 @@ public:
     char txt_folder_name_[64];
 
     std::future<void> worker_;
-    bool computing_ = false;
+    std::atomic<bool> computing_ = false;
     std::atomic<bool> cancel_{false};
-    std::atomic<float> progress_{0.0f};
-    std::atomic<bool> finished_{false};
+    std::vector<float> thread_progress_;
+    std::atomic<bool> in_memory_{false};
+    int num_threads_;
 
     void init_glfw_glad(const char* title, int width, int height);
     void init_imgui();
@@ -49,8 +50,8 @@ public:
     GLuint create_texture();
     void update_texture(double show_time);
     std::array<unsigned char, 3> determine_pixel_color(int i, int j, double show_time) const;
-    void calculate();
     void compute_task();
+    void compute_block(PendulumSystem& sub, float& prog);
 
     void save_image(double show_time);
     void save_state_to_txt_file(double save_time);

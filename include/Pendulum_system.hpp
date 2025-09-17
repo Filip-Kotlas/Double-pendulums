@@ -73,6 +73,9 @@ class PendulumSystem : public System
             this->set_initial_conditions(time);
         }
 
+        // Konstruktor pro subgrid (kopie části původního systému)
+        PendulumSystem(const PendulumSystem& original, int start_y, int end_y);
+
         // construction from data in txt file
         PendulumSystem(std::string folder_name);
         void add_state_to_history_from_file(std::string file_name);
@@ -85,6 +88,9 @@ class PendulumSystem : public System
         void set_initial_conditions(const double time);
         void write_state_to_file(double save_time, std::string folder_name);
         void record_state();
+        // Sloučení výsledků z podmřížky zpět do hlavního systému
+        void merge(const PendulumSystem& part, int start_y);
+
 
         double get_phi_1(int i, int j, double time) const {
             return get_state_history(time)[(j*size_x + i)*4];

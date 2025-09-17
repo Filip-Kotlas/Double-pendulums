@@ -15,6 +15,38 @@ length_2(1)
     }
 }
 
+PendulumSystem::PendulumSystem(const PendulumSystem& original, int start_y, int end_y)
+    : size_x(original.size_x),
+      size_y(end_y - start_y),
+      mass_1(original.mass_1),
+      mass_2(original.mass_2),
+      length_1(original.length_1),
+      length_2(original.length_2),
+      bounds(original.bounds) 
+{
+    // Každý bod má 4 stupně volnosti
+    this->degrees_of_freedom = size_x * size_y * 4;
+
+    // Čas začíná stejně jako v originálu
+    this->time = original.time;
+
+    // Alokujeme state pro podmřížku
+    state.resize(this->degrees_of_freedom, 0.0);
+
+    // Překopírujeme data z originálu (jen řádky start_y .. end_y-1)
+    for (int j = start_y; j < end_y; ++j) {
+        for (int i = 0; i < size_x; ++i) {
+            int local_j = j - start_y;
+
+            set_phi_1(i, local_j, original.get_phi_1(i, j));
+            set_phi_2(i, local_j, original.get_phi_2(i, j));
+            set_der_phi_1(i, local_j, original.get_der_phi_1(i, j));
+            set_der_phi_2(i, local_j, original.get_der_phi_2(i, j));
+        }
+    }
+}
+
+
 void PendulumSystem::add_state_to_history_from_file(std::string file_name)
 {
     std::ifstream file(file_name);
@@ -135,3 +167,32 @@ void PendulumSystem::record_state()
 {
     this->state_history[this->time] = state;
 }
+
+void PendulumSystem::merge(const PendulumSystem& part, int start_y) {
+    // projdeme všechny uložené stavy v part.state_history
+    for (const auto& [time_key, state_vec] : part.state_history) {
+        // pokud ještě nemáme záznam pro tenhle čas, vytvoříme nový
+        auto& target_state = this->state_history[time_key];
+
+        // pokud je to poprvé, musíme mít správnou velikost
+        if (target_state.empty()) {
+            target_state.resize(this->degrees_of_freedom, 0.0);
+        }
+
+        // zkopírujeme blok hodnot z part.state_history do target_state
+        for (int j = 0; j < part.size_y; ++j) {
+            for (int i = 0; i < part.size_x; ++i) {
+                int global_j = start_y + j;
+
+                target_state[(global_j * size_x + i) * 4 + 0] = state_vec[(j * part.size_x + i) * 4 + 0];
+                target_state[(global_j * size_x + i) * 4 + 1] = state_vec[(j * part.size_x + i) * 4 + 1];
+                target_state[(global_j * size_x + i) * 4 + 2] = state_vec[(j * part.size_x + i) * 4 + 2];
+                target_state[(global_j * size_x + i) * 4 + 3] = state_vec[(j * part.size_x + i) * 4 + 3];
+            }
+        }
+    }
+
+    // přeneseme také čas (systémy běží synchronně)
+    this->time = part.time;
+}
+

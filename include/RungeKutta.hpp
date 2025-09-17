@@ -8,6 +8,7 @@
 #include <iomanip>
 #include <vector>
 #include <chrono>
+#include <atomic>
 
 class RungeKutta
 {
@@ -21,10 +22,12 @@ class RungeKutta
         double time_step;
         double integration_step;
         System *current_system;
+        float* progress_ptr = nullptr;
+        std::atomic<bool>* cancel_ptr = nullptr;
 
     
     public:
-        void set_up(System *system, double time_step, double integration_step);
+        void set_up(System *system, double time_step, double integration_step, float* progress, std::atomic<bool>* cancel);
         void solve(double time_max);
         void integrate_step(double time_max);
         void print_progress(int step, int steps_count,

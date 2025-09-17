@@ -7,6 +7,7 @@
 #include <cmath>
 #include <vector>
 #include <stdexcept>
+#include <numeric>
 
 constexpr double PI = 3.141592653589793;
 
@@ -26,6 +27,7 @@ Window::Window(int width, int height, const char* title)
     system_ = new PendulumSystem(size_x_, size_y_, bounds_, 1.0, 1.0, 1.0, 1.0);
     texture_ = create_texture();
     txt_folder_name_[0] = '\0';
+    num_threads_ = std::max(1, std::min(static_cast<int>(std::thread::hardware_concurrency()), this->size_y_));
 }
 
 Window::~Window() {
@@ -130,15 +132,6 @@ void Window::update_texture(double show_time) {
 }
 
 
-void Window::calculate() {
-    if (system_) {
-        RungeKutta solver;
-        double time_step = 1.0 / this->steps_per_second_;
-        solver.set_up(system_, time_step, integration_step_);
-        solver.solve(max_time_);
-    }
-}
-
 void Window::save_image(double show_time) {
     if (!texture_ || !system_) return;
 
@@ -187,7 +180,6 @@ void Window::render_main_menu() {
 
                     computing_ = true;
                     cancel_ = false;
-                    progress_ = 0.0f;
 
                     worker_ = std::async(std::launch::async, &Window::compute_task, this);
                 }
@@ -195,7 +187,9 @@ void Window::render_main_menu() {
                 if (ImGui::MenuItem("Cancel computation")) {
                     cancel_ = true;
                 }
-                ImGui::ProgressBar(progress_, ImVec2(0.0f, 0.0f));
+                float progress = std::accumulate(thread_progress_.begin(), thread_progress_.end(), 0.0f)
+                                 / static_cast<float>(thread_progress_.size());
+                ImGui::ProgressBar(progress, ImVec2(0.0f, 0.0f));
             }
             ImGui::EndMenu();
         }
@@ -208,29 +202,35 @@ void Window::render_main_menu() {
             ImGui::InputInt("Size in y direction", &size_y_);
             ImGui::InputFloat("Maximum time", &max_time_);
             ImGui::InputDouble("Integration step", &integration_step_);
-            ImGui::SliderInt("Step count", &steps_per_second_, 1, 60);
+            ImGui::SliderInt("Frames per second", &steps_per_second_, 1, 60);
+            ImGui::SliderInt("Threads",
+                             &num_threads_,
+                             1,
+                             std::min(2*static_cast<int>(std::thread::hardware_concurrency()), this->size_y_));
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("View")) {
-            if (finished_) {
+            if (in_memory_) {
                 if (ImGui::MenuItem("Render results")) {
                     if (texture_) { glDeleteTextures(1, &texture_); texture_ = 0; }
                     texture_ = create_texture();
                     update_texture(show_time_);
-                    finished_ = false;
                 }
-            }
-            if (ImGui::SliderFloat("Time", &show_time_, 0, max_time_)) {
-                update_texture(show_time_);
+                if (ImGui::SliderFloat("Time", &show_time_, 0, max_time_)) {
+                    update_texture(show_time_);
+                }
             }
             ImGui::InputText("Input file name", txt_folder_name_, sizeof(txt_folder_name_));
             if (ImGui::MenuItem("Load from folder")) {
                 if (texture_) { glDeleteTextures(1, &texture_); texture_ = 0; }
                 delete system_;
                 system_ = new PendulumSystem(std::string(txt_folder_name_));
-                max_time_ = static_cast<float>(system_->get_time());
-                texture_ = create_texture();
-                update_texture(0.0);
+                if (system) {
+                    max_time_ = static_cast<float>(system_->get_time());
+                    texture_ = create_texture();
+                    update_texture(0.0);
+                    in_memory_ = true;
+                }
             }
             ImGui::EndMenu();
         }
@@ -239,22 +239,83 @@ void Window::render_main_menu() {
 }
 
 void Window::compute_task() {
-    RungeKutta solver;
-    double time_step = 1.0 / steps_per_second_;
-    solver.set_up(system_, time_step, integration_step_);
-    system_->record_state();
+    computing_ = true;
+    cancel_    = false;
 
-    int steps_count = max_time_ * steps_per_second_;
-    for (int step = 0; step <= steps_count; ++step) {
-        if (cancel_)
-            break;
-        solver.integrate_step(max_time_);
-        system_->record_state();
-        progress_ = float(step + 1) / steps_count;
+    if (!system_) {
+        computing_ = false;
+        return;
     }
 
+
+    thread_progress_.clear();
+    thread_progress_.resize(num_threads_);
+    for (auto& p : thread_progress_)
+        p = 0.0f;
+
+
+    // Rozdělení řádků po vláknech rovnoměrně (s případným zbytkem)
+    const int base_rows = size_y_ / num_threads_;
+    const int rem_rows  = size_y_ % num_threads_;
+
+    // Každé vlákno dostane vlastní kopii podmřížky
+    std::vector<PendulumSystem> subsystems;
+    subsystems.reserve(num_threads_);
+
+    std::vector<std::future<void>> futures;
+    futures.reserve(num_threads_);
+
+    // Vytvoření sub-systémů a spuštění výpočtů (bez lambd)
+    int y = 0;
+    for (int t = 0; t < num_threads_; ++t) {
+        const int rows    = base_rows + (t < rem_rows ? 1 : 0);
+        const int start_y = y;
+        const int end_y   = y + rows;
+        y = end_y;
+
+        // Konstruktor subgridu: PendulumSystem(const PendulumSystem& original, int start_y, int end_y)
+        subsystems.emplace_back(*system_, start_y, end_y);
+
+        // Spustíme výpočet bloku: compute_block(PendulumSystem& sub)
+        futures.emplace_back(std::async(std::launch::async,
+                                        &Window::compute_block, this,
+                                        std::ref(subsystems.back()),
+                                        std::ref(thread_progress_[t])));
+    }
+
+    // Čekání na dokončení vláken + hrubý progress
+    int done = 0;
+    for (auto& f : futures) {
+        f.get();
+    }
+
+    // Sloučení výsledků zpět do hlavního systému
+    y = 0;
+    for (int t = 0; t < num_threads_; ++t) {
+        const int rows    = base_rows + (t < rem_rows ? 1 : 0);
+        const int start_y = y;
+        const int end_y   = y + rows;
+        y = end_y;
+
+        // Merge: system_->merge(const PendulumSystem& part, int start_y)
+        system_->merge(subsystems[t], start_y);
+    }
+
+    in_memory_ = true;   // GUI teď může přes menu „Generate texture“ vytvořit texturu
     computing_ = false;
-    finished_ = true;
+}
+
+void Window::compute_block(PendulumSystem& sub, float& prog) {
+    RungeKutta solver;
+
+    // velikost kroku pro výpočet
+    double time_step = 1.0 / steps_per_second_;
+
+    // nastavíme solver na tento pod-systém
+    solver.set_up(&sub, time_step, integration_step_, &prog, &cancel_);
+
+    // výpočet až do max_time_
+    solver.solve(max_time_);
 }
 
 void Window::render_image_window() {
