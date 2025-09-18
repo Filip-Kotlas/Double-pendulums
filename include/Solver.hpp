@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Pendulum_system.hpp"
+#include "Pendulum_system.tpp"
 #include "System.hpp"
 
 #include <iostream>
@@ -10,7 +11,7 @@
 #include <chrono>
 #include <atomic>
 
-template<typename Method, typename Real = double>
+template<typename Method, typename System, typename Real = double>//, typename = typename std::enable_if<std::is_floating_point<Real>::value>::type>
 class Solver
 {
 public:
@@ -48,7 +49,7 @@ private:
 
 };
 
-template<typename Real>
+template<typename Real, typename System>
 class RungeKutta_4
 {
 public:
@@ -111,9 +112,9 @@ private:
 
 };
 
-template<typename Real>
+template<typename Real, typename System>
 struct EulerMethod {
-    static void integration_step(System* system, Real time_step, Real integration_step) {
+    static void integrate_step(System* system, Real time_step, Real integration_step) {
         Real start_time = system->get_time();
         std::vector<Real> rhs(system->get_degrees_of_freedom());
 

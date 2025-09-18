@@ -11,8 +11,8 @@
 #include <array>
 #include <string>
 
-#include "System.hpp"
 #include "Pendulum_system.hpp"
+#include "Pendulum_system.tpp"
 #include "Solver.hpp"
 #include "Pi.hpp"
 
@@ -55,7 +55,7 @@ public:
     void update_texture(double show_time);
     std::array<unsigned char, 3> determine_pixel_color(int i, int j, double show_time) const;
     void compute_task();
-    void compute_block(PendulumSystem& sub, float& prog);
+    void compute_block(PendulumSystem<double>& sub, float& prog);
 
     void save_image(double show_time);
     void save_state_to_txt_file(double save_time);
@@ -64,6 +64,6 @@ public:
 
     GLFWwindow* window_{nullptr};
     GLuint texture_{0};
-    PendulumSystem* system_{nullptr};
+    PendulumSystem<double>* system_{nullptr};
 
 };

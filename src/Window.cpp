@@ -9,6 +9,7 @@
 #include <stdexcept>
 #include <numeric>
 #include "Pendulum_system.hpp"
+#include "Pendulum_system.tpp"
 
 //constexpr double PI = 3.141592653589793;
 
@@ -25,10 +26,11 @@ Window::Window(int width, int height, const char* title)
     init_imgui();
 
     // inicializace systému a textury
-    system_ = new PendulumSystem(size_x_, size_y_, bounds_, 1.0, 1.0, 1.0, 1.0);
+    system_ = new PendulumSystem<double>(size_x_, size_y_, bounds_, 1.0, 1.0, 1.0, 1.0);
     texture_ = create_texture();
     txt_folder_name_[0] = '\0';
     num_threads_ = std::max(1, std::min(static_cast<int>(std::thread::hardware_concurrency()), this->size_y_));
+    
 }
 
 Window::~Window() {
@@ -193,7 +195,7 @@ void Window::render_file_menu() {
                     glDeleteTextures(1, &texture_); texture_ = 0;
                 }
                 delete system_;
-                system_ = new PendulumSystem(size_x_, size_y_, bounds_, 1.0, 1.0, 1.0, 1.0);
+                system_ = new PendulumSystem<double>(size_x_, size_y_, bounds_, 1.0, 1.0, 1.0, 1.0);
 
                 in_memory_ = false;
     
@@ -255,7 +257,7 @@ void Window::render_view_menu() {
             }
             delete system_;
 
-            system_ = new PendulumSystem(std::string(txt_folder_name_));
+            system_ = new PendulumSystem<double>(std::string(txt_folder_name_));
             if (system) {
                 max_time_ = static_cast<float>(system_->get_time());
                 texture_ = create_texture();
@@ -287,7 +289,7 @@ void Window::compute_task() {
     const int rem_rows  = size_y_ % num_threads_;
 
     // Každé vlákno dostane vlastní kopii podmřížky
-    std::vector<PendulumSystem> subsystems;
+    std::vector<PendulumSystem<double>> subsystems;
     subsystems.reserve(num_threads_);
 
     std::vector<std::future<void>> futures;
@@ -333,11 +335,13 @@ void Window::compute_task() {
     computing_ = false;
 }
 
-void Window::compute_block(PendulumSystem& sub, float& prog) {
+void Window::compute_block(PendulumSystem<double>& sub, float& prog) {
 
     double time_step = 1.0 / steps_per_second_;
 
-    Solver<RungeKutta_4<double>,double> solver(&sub, time_step, integration_step_, &prog, &cancel_);
+    Solver<RungeKutta_4<double, PendulumSystem<double>>,
+           PendulumSystem<double>,
+           double> solver(&sub, time_step, integration_step_, &prog, &cancel_);
 
     solver.solve(max_time_);
 }
@@ -391,8 +395,8 @@ void Window::run() {
 }
 
 std::array<unsigned char, 3> Window::determine_pixel_color(int i, int j, double show_time) const {
-    double phi_1 = normalize_angle(system_->get<PendulumSystem::Component::phi_1>(i, j, show_time));
-    double phi_2 = normalize_angle(system_->get<PendulumSystem::Component::phi_2>(i, j, show_time));
+    double phi_1 = normalize_angle(system_->get<PendulumSystem<double>::Component::phi_1>(i, j, show_time));
+    double phi_2 = normalize_angle(system_->get<PendulumSystem<double>::Component::phi_2>(i, j, show_time));
 
     // Výchozí černá
     std::array<unsigned char, 3> color = {0, 0, 0};

@@ -1,6 +1,7 @@
-#include "Pendulum_system.hpp"
+#pragma once
 
-PendulumSystem::PendulumSystem(std::string folder_name)
+template<typename Real>
+PendulumSystem<Real>::PendulumSystem(std::string folder_name)
 : mass_1(1),
 mass_2(1),
 length_1(1),
@@ -15,7 +16,8 @@ length_2(1)
     }
 }
 
-PendulumSystem::PendulumSystem(const PendulumSystem& original, int start_y, int end_y)
+template<typename Real>
+PendulumSystem<Real>::PendulumSystem(const PendulumSystem<Real>& original, int start_y, int end_y)
     : size_x(original.size_x),
       size_y(end_y - start_y),
       mass_1(original.mass_1),
@@ -31,7 +33,7 @@ PendulumSystem::PendulumSystem(const PendulumSystem& original, int start_y, int 
     this->time = original.time;
 
     // Alokujeme state pro podmřížku
-    state.resize(this->degrees_of_freedom, 0.0);
+    this->state.resize(this->degrees_of_freedom, 0.0);
 
     // Překopírujeme data z originálu (jen řádky start_y .. end_y-1)
     for (int j = start_y; j < end_y; ++j) {
@@ -46,8 +48,8 @@ PendulumSystem::PendulumSystem(const PendulumSystem& original, int start_y, int 
     }
 }
 
-
-void PendulumSystem::add_state_to_history_from_file(std::string file_name)
+template<typename Real>
+void PendulumSystem<Real>::add_state_to_history_from_file(std::string file_name)
 {
     std::ifstream file(file_name);
     if (!file)
@@ -65,10 +67,10 @@ void PendulumSystem::add_state_to_history_from_file(std::string file_name)
     std::getline(file, line);
     std::istringstream(line) >> this->size_y;
     this->degrees_of_freedom = size_x * size_y * 4;
-    state.resize(this->degrees_of_freedom, 0);
+    this->state.resize(this->degrees_of_freedom, 0);
 
     int i, j;
-    double phi_1, phi_2, der_phi_1, der_phi_2;
+    Real phi_1, phi_2, der_phi_1, der_phi_2;
     while (std::getline(file, line)) {
         if (line.empty())
             continue;
@@ -97,10 +99,11 @@ void PendulumSystem::add_state_to_history_from_file(std::string file_name)
     this->record_state();
 }
 
-void PendulumSystem::get_right_hand_side(const double time, const std::vector<double> &state, std::vector<double> &right_hand_side)
+template<typename Real>
+void PendulumSystem<Real>::get_right_hand_side(const Real time, const std::vector<Real> &state, std::vector<Real> &right_hand_side)
 {
     float g = 9.81;
-    double a, b, c, d, e, f;
+    Real a, b, c, d, e, f;
     for(int i = 0; i < this->size_x; i++){
         for(int j = 0; j < this->size_y; j++){
             a = -(mass_1 + mass_2)*g*length_1*sin(get<Component::phi_1>(i, j))
@@ -120,7 +123,8 @@ void PendulumSystem::get_right_hand_side(const double time, const std::vector<do
     }
 }
 
-void PendulumSystem::set_initial_conditions(const double time)
+template<typename Real>
+void PendulumSystem<Real>::set_initial_conditions(const Real time)
 {
     for(int i = 0; i < this->size_x; i++){
         for(int j = 0; j < this->size_y; j++){
@@ -132,7 +136,8 @@ void PendulumSystem::set_initial_conditions(const double time)
     }
 }
 
-void PendulumSystem::write_state_to_file(double save_time, std::string folder_name)
+template<typename Real>
+void PendulumSystem<Real>::write_state_to_file(Real save_time, std::string folder_name)
 {
     std::stringstream file_path;
     file_path <<  folder_name << "\\State_" << std::setw( 5 ) << std::setfill( '0' ) << save_time << ".txt";
@@ -163,12 +168,14 @@ void PendulumSystem::write_state_to_file(double save_time, std::string folder_na
     }
 }
 
-void PendulumSystem::record_state()
+template<typename Real>
+void PendulumSystem<Real>::record_state()
 {
-    this->state_history[this->time] = state;
+    this->state_history[this->time] = this->state;
 }
 
-void PendulumSystem::merge(const PendulumSystem& part, int start_y) {
+template<typename Real>
+void PendulumSystem<Real>::merge(const PendulumSystem<Real>& part, int start_y) {
     // projdeme všechny uložené stavy v part.state_history
     for (const auto& [time_key, state_vec] : part.state_history) {
         // pokud ještě nemáme záznam pro tenhle čas, vytvoříme nový
