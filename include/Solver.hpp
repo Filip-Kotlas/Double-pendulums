@@ -11,7 +11,7 @@
 #include <chrono>
 #include <atomic>
 
-template<typename Method, typename System, typename Real = double>//, typename = typename std::enable_if<std::is_floating_point<Real>::value>::type>
+template<typename Method, typename System, typename Real = double, typename = typename std::enable_if<std::is_floating_point<Real>::value>::type>
 class Solver
 {
 public:

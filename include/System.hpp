@@ -4,7 +4,7 @@
 #include <cmath>
 #include <string>
 
-template<typename Derived, typename Real = double>
+template<typename Derived, typename Real = double, typename = typename std::enable_if<std::is_floating_point<Real>::value>::type>
 class BaseSystem
 {
     protected:
