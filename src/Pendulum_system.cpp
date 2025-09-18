@@ -38,10 +38,10 @@ PendulumSystem::PendulumSystem(const PendulumSystem& original, int start_y, int 
         for (int i = 0; i < size_x; ++i) {
             int local_j = j - start_y;
 
-            set_phi_1(i, local_j, original.get_phi_1(i, j));
-            set_phi_2(i, local_j, original.get_phi_2(i, j));
-            set_der_phi_1(i, local_j, original.get_der_phi_1(i, j));
-            set_der_phi_2(i, local_j, original.get_der_phi_2(i, j));
+            set<Component::phi_1>(i, local_j, original.get<Component::phi_1>(i, j));
+            set<Component::phi_2>(i, local_j, original.get<Component::phi_2>(i, j));
+            set<Component::der_phi_1>(i, local_j, original.get<Component::der_phi_1>(i, j));
+            set<Component::der_phi_2>(i, local_j, original.get<Component::der_phi_2>(i, j));
         }
     }
 }
@@ -82,10 +82,10 @@ void PendulumSystem::add_state_to_history_from_file(std::string file_name)
             throw std::runtime_error("The file contains more data than anticipated.\n");
         }
 
-        set_phi_1(i, j, phi_1);
-        set_phi_2(i, j, phi_2);
-        set_der_phi_1(i, j, der_phi_1);
-        set_der_phi_2(i, j, der_phi_2);
+        set<Component::phi_1>(i, j, phi_1);
+        set<Component::phi_2>(i, j, phi_2);
+        set<Component::der_phi_1>(i, j, der_phi_1);
+        set<Component::der_phi_2>(i, j, der_phi_2);
 
         count++;
         }
@@ -103,17 +103,17 @@ void PendulumSystem::get_right_hand_side(const double time, const std::vector<do
     double a, b, c, d, e, f;
     for(int i = 0; i < this->size_x; i++){
         for(int j = 0; j < this->size_y; j++){
-            a = -(mass_1 + mass_2)*g*length_1*sin(get_phi_1(i, j))
-                - mass_2*length_1*length_2*pow(get_der_phi_2(i, j), 2)*sin(get_phi_1(i, j) - get_phi_2(i, j));
+            a = -(mass_1 + mass_2)*g*length_1*sin(get<Component::phi_1>(i, j))
+                - mass_2*length_1*length_2*pow(get<Component::der_phi_2>(i, j), 2)*sin(get<Component::phi_1>(i, j) - get<Component::phi_2>(i, j));
             b = (mass_1 + mass_2)*length_1*length_1;
-            c = mass_2*length_1*length_2*cos(get_phi_1(i, j) - get_phi_2(i, j));
-            d = -mass_2*g*length_2*sin(get_phi_2(i, j))
-                + mass_2*length_1*length_2*pow(get_der_phi_1(i, j), 2)*sin(get_phi_1(i, j) - get_phi_2(i, j));
+            c = mass_2*length_1*length_2*cos(get<Component::phi_1>(i, j) - get<Component::phi_2>(i, j));
+            d = -mass_2*g*length_2*sin(get<Component::phi_2>(i, j))
+                + mass_2*length_1*length_2*pow(get<Component::der_phi_1>(i, j), 2)*sin(get<Component::phi_1>(i, j) - get<Component::phi_2>(i, j));
             e = mass_2*length_2*length_2;
-            f = mass_2*length_1*length_2*cos(get_phi_1(i, j) - get_phi_2(i, j));
+            f = mass_2*length_1*length_2*cos(get<Component::phi_1>(i, j) - get<Component::phi_2>(i, j));
 
-            right_hand_side[(j*size_x + i)*4] = get_der_phi_1(i, j);
-            right_hand_side[(j*size_x + i)*4 + 1] = get_der_phi_2(i, j);
+            right_hand_side[(j*size_x + i)*4] = get<Component::der_phi_1>(i, j);
+            right_hand_side[(j*size_x + i)*4 + 1] = get<Component::der_phi_2>(i, j);
             right_hand_side[(j*size_x + i)*4 + 2] = a/b - c/b*(d-a*f/b)/(e-c*f/b);
             right_hand_side[(j*size_x + i)*4 + 3] = (d-a*f/b)/(e-c*f/b);
         }
@@ -124,10 +124,10 @@ void PendulumSystem::set_initial_conditions(const double time)
 {
     for(int i = 0; i < this->size_x; i++){
         for(int j = 0; j < this->size_y; j++){
-            set_der_phi_1(i, j, 0);
-            set_der_phi_2(i, j, 0);
-            set_phi_1(i, j, bounds[0] + (i + 1)*(bounds[1] - bounds[0])/(size_x + 1));
-            set_phi_2(i, j, bounds[2] + (j + 1)*(bounds[3] - bounds[2])/(size_y + 1));
+            set<Component::der_phi_1>(i, j, 0);
+            set<Component::der_phi_2>(i, j, 0);
+            set<Component::phi_1>(i, j, bounds[0] + (i + 1)*(bounds[1] - bounds[0])/(size_x + 1));
+            set<Component::phi_2>(i, j, bounds[2] + (j + 1)*(bounds[3] - bounds[2])/(size_y + 1));
         }
     }
 }
@@ -153,10 +153,10 @@ void PendulumSystem::write_state_to_file(double save_time, std::string folder_na
         {
             file << i << " "
                  << j << " "
-                 << get_phi_1(i, j, save_time) << " "
-                 << get_phi_2(i, j, save_time) << " "
-                 << get_der_phi_1(i, j, save_time) << " "
-                 << get_der_phi_2(i, j, save_time);
+                 << get<Component::phi_1>(i, j, save_time) << " "
+                 << get<Component::phi_2>(i, j, save_time) << " "
+                 << get<Component::der_phi_1>(i, j, save_time) << " "
+                 << get<Component::der_phi_2>(i, j, save_time);
             file << std::endl;
         }
         file << std::endl;

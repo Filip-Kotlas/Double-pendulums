@@ -15,42 +15,7 @@
 
 class PendulumSystem : public System
 {
-    private:
-        int size_x;
-        int size_y;
-        double mass_1;
-        double mass_2;
-        double length_1;
-        double length_2;
-        std::array<double, 4> bounds;
-
-        double get_phi_1(int i, int j) const {
-            return state[(j*size_x + i)*4];
-        };
-        double get_phi_2(int i, int j) const {
-            return state[(j*size_x + i)*4 + 1];
-        };
-        double get_der_phi_1(int i, int j) const {
-            return state[(j*size_x + i)*4 + 2];
-        }
-        double get_der_phi_2(int i, int j) const {
-            return state[(j*size_x + i)*4 + 3];
-        }
-
-        void set_phi_1(int i, int j, double value){
-            state[(j*size_x + i)*4] = value;
-        }
-        void set_phi_2(int i, int j, double value){
-            state[(j*size_x + i)*4 + 1] = value;
-        }
-        void set_der_phi_1(int i, int j, double value){
-            state[(j*size_x + i)*4 + 2] = value;
-        }
-        void set_der_phi_2(int i, int j, double value){
-            state[(j*size_x + i)*4 + 3] = value;
-        }
-
-    public:
+    public:        
         // constructor
         PendulumSystem(int size_x,
                     int size_y,
@@ -73,12 +38,19 @@ class PendulumSystem : public System
             this->set_initial_conditions(time);
         }
 
-        // Konstruktor pro subgrid (kopie části původního systému)
+        // Constructor for subsystem of PenduluSystem with y coordinates starting at start_y and ending at end_y
         PendulumSystem(const PendulumSystem& original, int start_y, int end_y);
 
-        // construction from data in txt file
+        // Constructor from data file.
         PendulumSystem(std::string folder_name);
         void add_state_to_history_from_file(std::string file_name);
+
+        enum class Component {
+        phi_1 = 0,
+        phi_2 = 1,
+        der_phi_1 = 2,
+        der_phi_2 = 3
+        };
 
         std::array<int, 2> get_size() const {
             return {this->size_x, this->size_y};
@@ -91,18 +63,64 @@ class PendulumSystem : public System
         // Sloučení výsledků z podmřížky zpět do hlavního systému
         void merge(const PendulumSystem& part, int start_y);
 
-
-        double get_phi_1(int i, int j, double time) const {
-            return get_state_history(time)[(j*size_x + i)*4];
-        }
-        double get_phi_2(int i, int j, double time) const {
-            return get_state_history(time)[(j*size_x + i)*4 + 1];
-        }
-        double get_der_phi_1(int i, int j, double time) const {
-            return get_state_history(time)[(j*size_x + i)*4 + 2];
-        }
-        double get_der_phi_2(int i, int j, double time) const {
-            return get_state_history(time)[(j*size_x + i)*4 + 3];
+        // Getter for state in history
+        template<Component C>
+        double get(int i, int j, double time) const {
+            constexpr int offset = static_cast<int>(C);
+            return get_state_history(time)[(j*size_x + i)*4 + offset];
         }
         
-};
+        
+    private:
+        int size_x;
+        int size_y;
+        double mass_1;
+        double mass_2;
+        double length_1;
+        double length_2;
+        std::array<double, 4> bounds;
+    
+    
+        // Template setter and getter for phi 1, phi 2 and their derivations
+        template<Component C>
+        double get(int i, int j) const {
+            constexpr int offset = static_cast<int>(C);
+            return state[(j * size_x + i) * 4 + offset];
+        }
+        template<Component C>
+        void set(int i, int j, double value) {
+            constexpr int offset = static_cast<int>(C);
+            state[(j * size_x + i) * 4 + offset] = value;
+        }
+
+
+};    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

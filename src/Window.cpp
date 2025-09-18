@@ -8,11 +8,12 @@
 #include <vector>
 #include <stdexcept>
 #include <numeric>
+#include "Pendulum_system.hpp"
 
-constexpr double PI = 3.141592653589793;
+//constexpr double PI = 3.141592653589793;
 
 Window::Window(int width, int height, const char* title)
-    : bounds_{-PI, PI, -PI, PI},
+    : bounds_{-PI<6>, PI<6>, -PI<6>, PI<6>},
       size_x_{256},
       size_y_{256},
       show_time_{0.f},
@@ -31,6 +32,12 @@ Window::Window(int width, int height, const char* title)
 }
 
 Window::~Window() {
+    cancel_ = true;
+
+    if (worker_.valid()) {
+        worker_.get();
+    }    
+
     if (texture_)
         glDeleteTextures(1, &texture_);
     delete system_;
@@ -96,7 +103,7 @@ GLuint Window::create_texture() {
 double Window::normalize_angle(double angle) const
 {
     // normalizuje úhel do rozsahu [0, 2*PI)
-    return angle - std::floor(angle / (2.0 * PI)) * 2.0 * PI;
+    return angle - std::floor(angle / (2.0 * PI<6>)) * 2.0 * PI<6>;
 }
 
 void Window::update_texture(double show_time) {
@@ -165,76 +172,98 @@ void Window::process_events() {
 
 void Window::render_main_menu() {
     if (ImGui::BeginMainMenuBar()) {
-        if (ImGui::BeginMenu("File")) {
-            if (ImGui::MenuItem("Save image")) {
-                save_image(show_time_);
-            }
-            if (ImGui::MenuItem("Save calculations")) {
-                save_state_to_txt_file(show_time_);
-            }
-            if (!computing_) {
-                if (ImGui::MenuItem("Run computation")) {
-                    if (texture_) { glDeleteTextures(1, &texture_); texture_ = 0; }
-                    delete system_;
-                    system_ = new PendulumSystem(size_x_, size_y_, bounds_, 1.0, 1.0, 1.0, 1.0);
-
-                    computing_ = true;
-                    cancel_ = false;
-
-                    worker_ = std::async(std::launch::async, &Window::compute_task, this);
-                }
-            } else {
-                if (ImGui::MenuItem("Cancel computation")) {
-                    cancel_ = true;
-                }
-                float progress = std::accumulate(thread_progress_.begin(), thread_progress_.end(), 0.0f)
-                                 / static_cast<float>(thread_progress_.size());
-                ImGui::ProgressBar(progress, ImVec2(0.0f, 0.0f));
-            }
-            ImGui::EndMenu();
-        }
-        if (ImGui::BeginMenu("Parameters")) {
-            ImGui::InputDouble("Left bound",  &bounds_[0]);
-            ImGui::InputDouble("Right bound", &bounds_[1]);
-            ImGui::InputDouble("Lower bound", &bounds_[2]);
-            ImGui::InputDouble("Upper bound", &bounds_[3]);
-            ImGui::InputInt("Size in x direction", &size_x_);
-            ImGui::InputInt("Size in y direction", &size_y_);
-            ImGui::InputFloat("Maximum time", &max_time_);
-            ImGui::InputDouble("Integration step", &integration_step_);
-            ImGui::SliderInt("Frames per second", &steps_per_second_, 1, 60);
-            ImGui::SliderInt("Threads",
-                             &num_threads_,
-                             1,
-                             std::min(2*static_cast<int>(std::thread::hardware_concurrency()), this->size_y_));
-            ImGui::EndMenu();
-        }
-        if (ImGui::BeginMenu("View")) {
-            if (in_memory_) {
-                if (ImGui::MenuItem("Render results")) {
-                    if (texture_) { glDeleteTextures(1, &texture_); texture_ = 0; }
-                    texture_ = create_texture();
-                    update_texture(show_time_);
-                }
-                if (ImGui::SliderFloat("Time", &show_time_, 0, max_time_)) {
-                    update_texture(show_time_);
-                }
-            }
-            ImGui::InputText("Input file name", txt_folder_name_, sizeof(txt_folder_name_));
-            if (ImGui::MenuItem("Load from folder")) {
-                if (texture_) { glDeleteTextures(1, &texture_); texture_ = 0; }
-                delete system_;
-                system_ = new PendulumSystem(std::string(txt_folder_name_));
-                if (system) {
-                    max_time_ = static_cast<float>(system_->get_time());
-                    texture_ = create_texture();
-                    update_texture(0.0);
-                    in_memory_ = true;
-                }
-            }
-            ImGui::EndMenu();
-        }
+        this->render_file_menu();
+        this->render_parameters_menu();
+        this->render_view_menu();
         ImGui::EndMainMenuBar();
+    }
+}
+
+void Window::render_file_menu() {
+    if (ImGui::BeginMenu("File")) {
+        if (ImGui::MenuItem("Save image")) {
+            save_image(show_time_);
+        }
+        if (ImGui::MenuItem("Save calculations")) {
+            save_state_to_txt_file(show_time_);
+        }
+        if (!computing_) {
+            if (ImGui::MenuItem("Run computation")) {
+                if (texture_) {
+                    glDeleteTextures(1, &texture_); texture_ = 0;
+                }
+                delete system_;
+                system_ = new PendulumSystem(size_x_, size_y_, bounds_, 1.0, 1.0, 1.0, 1.0);
+
+                in_memory_ = false;
+    
+                worker_ = std::async(std::launch::async, &Window::compute_task, this);
+            }
+        } else {
+            if (ImGui::MenuItem("Cancel computation")) {
+                cancel_ = true;
+            }
+            float progress = std::accumulate(thread_progress_.begin(), thread_progress_.end(), 0.0f)
+                             / static_cast<float>(thread_progress_.size());
+            ImGui::ProgressBar(progress, ImVec2(0.0f, 0.0f));
+        }
+        ImGui::EndMenu();
+    }
+}
+
+
+void Window::render_parameters_menu() {
+    if (ImGui::BeginMenu("Parameters")) {
+        ImGui::InputDouble("Left bound",  &bounds_[0]);
+        ImGui::InputDouble("Right bound", &bounds_[1]);
+        ImGui::InputDouble("Lower bound", &bounds_[2]);
+        ImGui::InputDouble("Upper bound", &bounds_[3]);
+        ImGui::InputInt("Size in x direction", &size_x_);
+        ImGui::InputInt("Size in y direction", &size_y_);
+        ImGui::InputFloat("Maximum time", &max_time_);
+        ImGui::InputDouble("Integration step", &integration_step_);
+        ImGui::SliderInt("Frames per second", &steps_per_second_, 1, 60);
+        ImGui::SliderInt("Threads",
+                         &num_threads_,
+                         1,
+                         std::min(2*static_cast<int>(std::thread::hardware_concurrency()), this->size_y_));
+        ImGui::EndMenu();
+    }
+}
+
+void Window::render_view_menu() {
+    if (ImGui::BeginMenu("View")) {
+        if (in_memory_) {
+            if (ImGui::MenuItem("Render results")) {
+                if (texture_) { glDeleteTextures(1, &texture_); texture_ = 0; }
+                texture_ = create_texture();
+                update_texture(show_time_);
+            }
+            if (ImGui::SliderFloat("Time", &show_time_, 0, max_time_)) {
+                update_texture(show_time_);
+            }
+        }
+        ImGui::InputText("Input file name", txt_folder_name_, sizeof(txt_folder_name_));
+        if (ImGui::MenuItem("Load from folder")) {
+            cancel_ = true;
+            in_memory_ = false;
+            if (worker_.valid())
+                worker_.get();
+                
+            if (texture_) {
+                glDeleteTextures(1, &texture_); texture_ = 0;
+            }
+            delete system_;
+
+            system_ = new PendulumSystem(std::string(txt_folder_name_));
+            if (system) {
+                max_time_ = static_cast<float>(system_->get_time());
+                texture_ = create_texture();
+                update_texture(0.0);
+                in_memory_ = true;
+            }
+        }
+        ImGui::EndMenu();
     }
 }
 
@@ -246,7 +275,6 @@ void Window::compute_task() {
         computing_ = false;
         return;
     }
-
 
     thread_progress_.clear();
     thread_progress_.resize(num_threads_);
@@ -367,19 +395,19 @@ void Window::run() {
 }
 
 std::array<unsigned char, 3> Window::determine_pixel_color(int i, int j, double show_time) const {
-    double phi1 = normalize_angle(system_->get_phi_1(i, j, show_time));
-    double phi2 = normalize_angle(system_->get_phi_2(i, j, show_time));
+    double phi_1 = normalize_angle(system_->get<PendulumSystem::Component::phi_1>(i, j, show_time));
+    double phi_2 = normalize_angle(system_->get<PendulumSystem::Component::phi_2>(i, j, show_time));
 
     // Výchozí černá
     std::array<unsigned char, 3> color = {0, 0, 0};
 
-    if (phi1 <= PI && phi2 <= PI) {
+    if (phi_1 <= PI<6> && phi_2 <= PI<6>) {
         color = {255, 255, 0}; // žlutá (R+G)
     }
-    else if (phi1 <= PI && phi2 > PI) {
+    else if (phi_1 <= PI<6> && phi_2 > PI<6>) {
         color = {255, 0, 0};   // červená
     }
-    else if (phi1 > PI && phi2 <= PI) {
+    else if (phi_1 > PI<6> && phi_2 <= PI<6>) {
         color = {0, 0, 255};   // modrá
     }
     else {

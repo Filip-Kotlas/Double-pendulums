@@ -24,7 +24,6 @@ void RungeKutta::solve(double time_max)
     for (int k = 0; k <= steps_count; k++) {
         if (cancel_ptr && cancel_ptr->load())
             break;
-
         this->integrate_step(time_max);
         this->current_system->record_state();
 

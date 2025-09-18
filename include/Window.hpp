@@ -14,6 +14,7 @@
 #include "System.hpp"
 #include "Pendulum_system.hpp"
 #include "RungeKutta.hpp"
+#include "Pi.hpp"
 
 class Window {
 public:
@@ -44,6 +45,9 @@ public:
 
     void process_events();
     void render_main_menu();
+    void render_file_menu();
+    void render_parameters_menu();
+    void render_view_menu();
     void render_image_window();
     void render_frame();
 
