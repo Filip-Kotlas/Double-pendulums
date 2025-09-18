@@ -11,8 +11,6 @@
 #include "Pendulum_system.hpp"
 #include "Pendulum_system.tpp"
 
-//constexpr double PI = 3.141592653589793;
-
 Window::Window(int width, int height, const char* title)
     : bounds_{-PI<6>, PI<6>, -PI<6>, PI<6>},
       size_x_{256},
@@ -216,15 +214,23 @@ void Window::render_file_menu() {
 
 void Window::render_parameters_menu() {
     if (ImGui::BeginMenu("Parameters")) {
-        ImGui::InputDouble("Left bound",  &bounds_[0]);
-        ImGui::InputDouble("Right bound", &bounds_[1]);
-        ImGui::InputDouble("Lower bound", &bounds_[2]);
-        ImGui::InputDouble("Upper bound", &bounds_[3]);
+        float angle_degrees = bounds_[0] * AngleConverter<float>::rad_to_deg;
+        ImGui::InputFloat("Left bound",  &angle_degrees);
+        bounds_[0] = angle_degrees * AngleConverter<float>::deg_to_rad;
+        angle_degrees = bounds_[1] * AngleConverter<float>::rad_to_deg;
+        ImGui::InputFloat("Right bound", &angle_degrees);
+        bounds_[1] = angle_degrees * AngleConverter<float>::deg_to_rad;
+        angle_degrees = bounds_[2] * AngleConverter<float>::rad_to_deg;
+        ImGui::InputFloat("Lower bound", &angle_degrees);
+        bounds_[2] = angle_degrees * AngleConverter<float>::deg_to_rad;
+        angle_degrees = bounds_[3] * AngleConverter<float>::rad_to_deg;
+        ImGui::InputFloat("Upper bound", &angle_degrees);
+        bounds_[3] = angle_degrees * AngleConverter<float>::deg_to_rad;
         ImGui::InputInt("Size in x direction", &size_x_);
         ImGui::InputInt("Size in y direction", &size_y_);
         ImGui::InputFloat("Maximum time", &max_time_);
         ImGui::InputDouble("Integration step", &integration_step_);
-        ImGui::SliderInt("Frames per second", &steps_per_second_, 1, 60);
+        ImGui::SliderInt("Frames per second", &steps_per_second_, 1, std::min(60, static_cast<int>(1.0/integration_step_ - 1)));
         ImGui::SliderInt("Threads",
                          &num_threads_,
                          1,

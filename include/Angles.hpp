@@ -19,3 +19,10 @@ struct Pi<-1> {
 
 template<int N>
 constexpr double PI = Pi<N>::value;
+
+
+template<typename T>
+struct AngleConverter {
+    static constexpr T rad_to_deg = static_cast<T>(180.0) / PI<6>;
+    static constexpr T deg_to_rad = PI<6> / static_cast<T>(180.0);
+};

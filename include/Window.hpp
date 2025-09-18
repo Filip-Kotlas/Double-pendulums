@@ -14,7 +14,7 @@
 #include "Pendulum_system.hpp"
 #include "Pendulum_system.tpp"
 #include "Solver.hpp"
-#include "Pi.hpp"
+#include "Angles.hpp"
 
 class Window {
 public:
