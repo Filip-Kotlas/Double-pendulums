@@ -334,15 +334,11 @@ void Window::compute_task() {
 }
 
 void Window::compute_block(PendulumSystem& sub, float& prog) {
-    RungeKutta solver;
 
-    // velikost kroku pro výpočet
     double time_step = 1.0 / steps_per_second_;
 
-    // nastavíme solver na tento pod-systém
-    solver.set_up(&sub, time_step, integration_step_, &prog, &cancel_);
+    Solver<RungeKutta_4<double>,double> solver(&sub, time_step, integration_step_, &prog, &cancel_);
 
-    // výpočet až do max_time_
     solver.solve(max_time_);
 }
 

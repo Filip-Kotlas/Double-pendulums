@@ -13,7 +13,7 @@
 
 #include "System.hpp"
 #include "Pendulum_system.hpp"
-#include "RungeKutta.hpp"
+#include "Solver.hpp"
 #include "Pi.hpp"
 
 class Window {
